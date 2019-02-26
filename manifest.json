@@ -1,0 +1,11 @@
+{
+    "display_name": "Last Will",
+    "version": "1.0",
+    "description": "Last Will",
+    "project_url": "https://github.com/KarolTrzeszczkowski/Electron-Cash-Plugin-Last Will/",
+    "minimum_ec_version": "3.2",
+    "package_name": "last-will-plugin",
+    "available_for": [
+        "qt"
+    ]
+}
