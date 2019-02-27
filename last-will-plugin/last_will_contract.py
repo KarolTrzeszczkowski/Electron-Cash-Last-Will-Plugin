@@ -37,6 +37,8 @@ class LastWillContract:
 
         print(len(self.redeemscript))
         # assert 76< len(self.redeemscript) <= 255  # simplify push in scriptsig; note len is around 200.
+
+
         self.address = Address.from_multisig_script(self.redeemscript)
         self.dummy_scriptsig_redeem = '01'*(74 + len(self.redeemscript)) # make dummy scripts of correct size for size estimation.
 

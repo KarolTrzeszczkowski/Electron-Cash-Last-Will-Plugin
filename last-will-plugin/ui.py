@@ -83,14 +83,14 @@ class Creating(QDialog, MessageBoxMixin):
         if address:
             self.fund_domain = [address]
             self.fund_change_address = address
-            self.default_redeem_address = address
+            self.bumping_address = address
             self.entropy_address = address
         else:
             self.fund_domain = None
             self.fund_change_address = None
-            self.default_redeem_address = self.wallet.get_unused_address()
+            self.bumping_address = self.wallet.get_unused_address()
             self.entropy_address = self.wallet.get_addresses()[0]
-        if not self.default_redeem_address:
+        if not self.bumping_address:
             # self.wallet.get_unused_address() returns None for imported privkey wallets.
             self.main_window.show_error(_("For imported private key wallets, please open the coin splitter from the Addresses tab by right clicking on an address, instead of via the Tools menu."))
             return
@@ -103,7 +103,7 @@ class Creating(QDialog, MessageBoxMixin):
 
         if isinstance(self.wallet, Multisig_Wallet):
             self.main_window.show_error(
-                "Multi-sig wallet support is partial.\nThe splitter coin itself is *not* multisig and belongs to you alone (it cannot be redeemed by other parties).")
+                "Last Will is designes for single signature only right now")
 
         #
         #       TWORZYMY KONTRAKT
@@ -203,7 +203,7 @@ class Creating(QDialog, MessageBoxMixin):
         l = QLabel(_("Output to:"))
         hbox.addWidget(l)
         self.redeem_address_e = QLineEdit()
-        self.redeem_address_e.setText(self.default_redeem_address.to_full_ui_string())
+        self.redeem_address_e.setText(self.bumping_address.to_full_ui_string())
         hbox.addWidget(self.redeem_address_e)
 
 
