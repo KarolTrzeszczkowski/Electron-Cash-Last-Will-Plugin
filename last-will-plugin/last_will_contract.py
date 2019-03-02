@@ -1,8 +1,7 @@
 from ecdsa.ecdsa import curve_secp256k1, generator_secp256k1
 from electroncash.bitcoin import ser_to_point, point_to_ser
-from electroncash.address import Address, Script, hash160, ScriptOutput
+from electroncash.address import Address, Script, hash160, ScriptOutput, OpCodes
 import hashlib
-from .op_codes import OpCodes
 import time
 LOCKTIME_THRESHOLD = 500000000
 
@@ -11,10 +10,9 @@ def joinbytes(iterable):
     return b''.join((bytes((x,)) if isinstance(x,int) else x) for x in iterable)
 
 class LastWillContract:
-    """Contract for making coins that can only be spent on BCH chains supporting
-    OP_CHECKDATASIGVERIFY, with backup clause for recovering dust on non-supporting
-    chains."""
-    def __init__(self, master_privkey):
+    """Contract of last will, that is timelocked for inheritor unless the creator bump it
+    from the hot wallet or spend from the cold wallet."""
+    def __init__(self, master_privkey, refreshing_address, cold_address, inheritor_address):
         G = generator_secp256k1
         order = G.order()
         # hard derivation (irreversible):
