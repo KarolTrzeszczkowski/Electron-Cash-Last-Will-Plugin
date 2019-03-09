@@ -32,19 +32,13 @@ class Intro(QDialog, MessageBoxMixin):
         b.clicked.connect(lambda : switch_to(Creating, self.main_window, self.plugin, self.wallet_name))
         hbox.addWidget(b)
 
-        b = QPushButton(_("Bump existing Last Will contract"))
+        b = QPushButton(_("Find existing Last Will"))
         #b.clicked.connect()
-        hbox.addWidget(b)
-        l = QLabel("<b>%s</b>"%(_("Claim money:")))
-        vbox.addWidget(l)
-        hbox = QHBoxLayout()
-        vbox.addLayout(hbox)
-        b = QPushButton(_("End my contract"))
-        hbox.addWidget(b)
-        b = QPushButton(_("Receive Inheritance"))
         hbox.addWidget(b)
         vbox.addStretch(1)
 
+    def find_last_will(self,):
+        history = self.wallet.get_history()
 
 
 
@@ -153,6 +147,7 @@ class Creating(QDialog, MessageBoxMixin):
                          "Make Last Will contract",
                          prompt_if_unsaved=True)
 
+
 def switch_to(mode, main_window, plugin, wallet_name):
     l = mode(main_window, plugin, wallet_name, address=None)
     tab = main_window.create_list_tab(l)
@@ -165,13 +160,40 @@ def switch_to(mode, main_window, plugin, wallet_name):
 
 
 def make_opreturn(data):
-    """Turn data bytes into a single-push opreturn script, part from Mark Lundeberg's Openswap"""
+    """Turn data bytes into a single-push opreturn script"""
     if len(data) < 76:
         return bytes((OpCodes.OP_RETURN, len(data))) + data
     elif len(data) < 256:
         return bytes((OpCodes.OP_RETURN, 76, len(data))) + data
     else:
         raise ValueError(data)
+
+
+
+class Manage(QDialog, MessageBoxMixin):
+    search_done_signal = pyqtSignal(object)
+
+
+    def __init__(self, parent, plugin, wallet_name, address):
+        QDialog.__init__(self, parent)
+        self.main_window = parent
+        self.wallet=parent.wallet
+        self.plugin = plugin
+        self.wallet_name = wallet_name
+        self.config = parent.config
+        self.password=None
+        self.contract=None
+        if self.wallet.has_password():
+            self.main_window.show_error(_("Last Will requires password. It will get access to your private keys."))
+            self.password = parent.password_dialog()
+            if not self.password:
+                return
+        self.fund_domain = None
+        self.fund_change_address = None
+        self.refresh_address = self.wallet.get_unused_address()
+        self.inheritor_address=None
+        self.cold_address=None
+        self.value=0
 
 
 class CreatingOld(QDialog, MessageBoxMixin):

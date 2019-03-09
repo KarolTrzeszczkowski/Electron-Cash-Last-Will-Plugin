@@ -1,6 +1,7 @@
 from ecdsa.ecdsa import curve_secp256k1, generator_secp256k1
 from electroncash.bitcoin import ser_to_point, point_to_ser
 from electroncash.address import Address, Script, hash160, ScriptOutput, OpCodes
+from electroncash.address import OpCodes as Op
 import hashlib
 import time
 LOCKTIME_THRESHOLD = 500000000
@@ -21,11 +22,40 @@ class LastWillContract:
         self.pub1ser = point_to_ser(self.priv1 * G, True)
         self.keypairs = {self.pub1ser.hex() : (self.priv1.to_bytes(32, 'big'), True)}
 
-
-
         days=0.04
         self.seconds= int(time.time()) + int(days * 24 * 60 * 60)
         seconds_bytes=format_time(self.seconds)
+
+        self.redeemscript2 = joinbytes([
+            len(refreshing_address.hash160), refreshing_address.hash160,
+            len(cold_address.hash160), cold_address.hash160,
+            len(inheritor_address.hash160), inheritor_address.hash160,
+            3,
+            Op.OP_PICK, Op.OP_TRUE, Op.OP_EQUAL,
+            Op.OP_IF,
+                5, Op.OP_PICK, Op.OP_HASH160, 3, Op.OP_PICK,
+                Op.OP_EQUALVERIFY, 4, Op.OP_PICK, 6, Op.OP_PICK,
+                Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+            Op.OP_ELSE,
+                3, Op.OP_PICK, 2, Op.OP_EQUAL,
+                Op.OP_IF,
+                    5, Op.OP_PICK, Op.OP_HASH160, 2, Op.OP_PICK,
+                    Op.OP_EQUALVERIFY, 4, Op.OP_PICK, 6, Op.OP_PICK, Op.OP_CHECKSIG,
+                    Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+                Op.OP_ELSE,
+                    3, Op.OP_PICK, 3, Op.OP_EQUAL,
+                    Op.OP_IF,
+                        len(seconds_bytes), seconds_bytes, Op.OP_CHECKLOCKTIMEVERIFY, Op.OP_DROP,
+                        5, Op.OP_PICK, Op.OP_HASH160, Op.OP_OVER, Op.OP_EQUALVERIFY, 4, Op.OP_PICK,
+                        Op.OP_6, Op.OP_PICK, Op.OP_CHECKSIG,
+                        Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+                    Op.OP_ELSE,
+                        Op.OP_FALSE,
+                    Op.OP_ENDIF,
+                Op.OP_ENDIF,
+            Op.OP_ENDIF
+        ])
+
 
         self.redeemscript = joinbytes([
             len(seconds_bytes), seconds_bytes, OpCodes.OP_CHECKLOCKTIMEVERIFY,
