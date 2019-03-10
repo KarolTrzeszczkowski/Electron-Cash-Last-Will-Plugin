@@ -13,23 +13,18 @@ def joinbytes(iterable):
 class LastWillContract:
     """Contract of last will, that is timelocked for inheritor unless the creator bump it
     from the hot wallet or spend from the cold wallet."""
-    def __init__(self, master_privkey, refreshing_address, cold_address, inheritor_address):
-        G = generator_secp256k1
-        order = G.order()
-        # hard derivation (irreversible):
-        x = int.from_bytes(hashlib.sha512(b'Split1' + master_privkey.to_bytes(32, 'big')).digest(), 'big')
-        self.priv1 = 1 + (x % (order-1))
-        self.pub1ser = point_to_ser(self.priv1 * G, True)
-        self.keypairs = {self.pub1ser.hex() : (self.priv1.to_bytes(32, 'big'), True)}
+    def __init__(self,addresses, privs, wallet):
 
+        self.publics = [wallet.get_public_keys(a) for a in addresses]
+        #self.keypairs_ref = {self.publics[0][0]: (privs[0], True)}
         days=0.04
         self.seconds= int(time.time()) + int(days * 24 * 60 * 60)
         seconds_bytes=format_time(self.seconds)
 
-        self.redeemscript2 = joinbytes([
-            len(refreshing_address.hash160), refreshing_address.hash160,
-            len(cold_address.hash160), cold_address.hash160,
-            len(inheritor_address.hash160), inheritor_address.hash160,
+        self.redeemscript = joinbytes([
+            len(addresses[0].hash160), addresses[0].hash160,
+            len(addresses[1].hash160), addresses[1].hash160,
+            len(addresses[2].hash160), addresses[2].hash160,
             3,
             Op.OP_PICK, Op.OP_TRUE, Op.OP_EQUAL,
             Op.OP_IF,
@@ -57,18 +52,13 @@ class LastWillContract:
         ])
 
 
-        self.redeemscript = joinbytes([
-            len(seconds_bytes), seconds_bytes, OpCodes.OP_CHECKLOCKTIMEVERIFY,
-            OpCodes.OP_DROP,
-            len(self.pub1ser), self.pub1ser,
-            OpCodes.OP_CHECKSIG ])
 
         print(len(self.redeemscript))
-        # assert 76< len(self.redeemscript) <= 255  # simplify push in scriptsig; note len is around 200.
+        assert 76< len(self.redeemscript) <= 255  # simplify push in scriptsig; note len is around 200.
 
 
         self.address = Address.from_multisig_script(self.redeemscript)
-        self.dummy_scriptsig_redeem = '01'*(74 + len(self.redeemscript)) # make dummy scripts of correct size for size estimation.
+        self.dummy_scriptsig_redeem = '01'*(140 + len(self.redeemscript)) # make dummy scripts of correct size for size estimation.
 
 
     def makeinput(self, prevout_hash, prevout_n, value):
@@ -80,7 +70,7 @@ class LastWillContract:
         """
 
         scriptSig = self.dummy_scriptsig_redeem
-        pubkey = self.pub1ser
+        pubkey = self.publics[0]
 
         txin = dict(
             prevout_hash = prevout_hash,
@@ -93,14 +83,14 @@ class LastWillContract:
             scriptCode = self.redeemscript.hex(),
             num_sig = 1,
             signatures = [None],
-            x_pubkeys = [pubkey.hex()],
+            x_pubkeys = pubkey,
             value = value,
             )
         return txin
 
     def signtx(self, tx):
         """generic tx signer for compressed pubkey"""
-        tx.sign(self.keypairs)
+        #tx.sign(self.keypairs)
 
     def completetx(self, tx):
         """
@@ -110,7 +100,7 @@ class LastWillContract:
 
         This works on multiple utxos if needed.
         """
-
+        pub = bytes.fromhex(self.publics[0][0])
         for txin in tx.inputs():
             # find matching inputs
             if txin['address'] != self.address:
@@ -121,6 +111,7 @@ class LastWillContract:
             sig = bytes.fromhex(sig)
             if txin['scriptSig'] == self.dummy_scriptsig_redeem:
                 script = [
+                    len(pub), pub,
                     len(sig), sig,
                     len(self.redeemscript), self.redeemscript, # Script shorter than 75 bits
                     ]

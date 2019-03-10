@@ -127,7 +127,10 @@ class Creating(QDialog, MessageBoxMixin):
             self.create_button.setDisabled(True)
         else:
             self.create_button.setDisabled(False)
-            self.contract=LastWillContract(self.privkey, self.refresh_address, self.cold_address, self.inheritor_address)
+            addresses = [self.refresh_address, self.cold_address, self.inheritor_address]
+            indexes = [self.wallet.get_address_index(a) for a in addresses]
+            privs = [self.wallet.keystore.get_private_key(i, self.password)[0] for i in indexes]
+            self.contract=LastWillContract(addresses, privs, self.wallet)
 
 
     def create_last_will(self, ):
