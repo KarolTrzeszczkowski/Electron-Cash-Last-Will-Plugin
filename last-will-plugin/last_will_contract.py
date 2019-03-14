@@ -16,8 +16,8 @@ class LastWillContract:
     from the hot wallet or spend from the cold wallet."""
 
     def __init__(self, addresses):
-        time1=7
-        time2=0
+        self.time1=7
+        self.time2=0
         self.addresses=addresses
         self.redeemscript = joinbytes([
             len(addresses[0].hash160), addresses[0].hash160,
@@ -37,7 +37,7 @@ class LastWillContract:
                     Op.OP_ELSE,
                     3, Op.OP_PICK, 3, Op.OP_EQUAL,
                     Op.OP_IF,
-                        3, time1, time2, 64, Op.OP_CHECKSEQUENCEVERIFY, Op.OP_DROP,
+                        3, self.time1, self.time2, 64, Op.OP_CHECKSEQUENCEVERIFY, Op.OP_DROP,
                         5, Op.OP_PICK, Op.OP_HASH160, Op.OP_OVER, Op.OP_EQUALVERIFY, 4, Op.OP_PICK,
                         Op.OP_6, Op.OP_PICK, Op.OP_CHECKSIG,
                         Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
@@ -56,43 +56,31 @@ class LastWillContractManager:
     """A device that spends the Last Will in three different ways."""
     def __init__(self,tx, contract, pub, priv, mode):
 
-        self.tx=tx
+        self.tx=tx[0]
         self.mode = mode
         self.public = pub
         self.keypair = {pub[0]: (priv, True)}
         self.contract = contract
-        self.dummy_scriptsig_redeem = '01' * (140 + len(self.contract.redeemscript))  # make dummy scripts of correct size for size estimation.
+        self.dummy_scriptsig = '01' * (140 + len(self.contract.redeemscript))  # make dummy scripts of correct size for size estimation.
+        self.sequence=0
+        self.value=int(self.tx.get('value'))
+        if mode==2:
+            self.sequence=self.contract.time1+2**22
+        self.txin = dict(
+            prevout_hash = self.tx.get('tx_hash'),
+            prevout_n = int(self.tx.get('tx_pos')),
+            sequence = self.sequence,
+            scriptSig = self.dummy_scriptsig,
+            type = 'unknown',
+            address = self.contract.address,
+            scriptCode = self.contract.redeemscript.hex(),
+            num_sig = 1,
+            signatures = [None],
+            x_pubkeys = pub,
+            value = self.value,
+            )
 
-    # def refresh(self):
-    #     prevout_hash = self.fund_txid_e.text()
-    #     prevout_n = int(self.fund_txout_e.text())
-    #     value = int(self.fund_value_e.text())
-    #     locktime = 0
-    #     estimate_fee = lambda x: (1 * x)
-    #     out_addr = Address.from_string(self.redeem_address_e.text())
-    #
-    #     # generate the special spend
-    #     inp = self.contract.makeinput(prevout_hash, prevout_n, value)
-    #
-    #     inputs = [inp]
-    #     invalue = value
-    #
-    #     outputs = [(TYPE_ADDRESS, self.contract.address, 0)]
-    #     tx1 = Transaction.from_io(inputs, outputs, locktime)
-    #     txsize = len(tx1.serialize(True)) // 2
-    #     fee = estimate_fee(txsize)
-    #
-    #     outputs = [(TYPE_ADDRESS, self.contract.address, invalue - fee)]
-    #     tx = Transaction.from_io(inputs, outputs, locktime)
-    #     self.contract.signtx(tx)
-    #     self.wallet.sign_transaction(tx, self.password)
-    #     self.contract.completetx(tx)
-    #
-    #     desc = "Refreshed Last Will"
-    #     show_transaction(tx, self.main_window,
-    #                      desc,
-    #                      prompt_if_unsaved=True)
-    #
+
     # def spend(self):
     #     prevout_hash = self.fund_txid_e.text()
     #     prevout_n = int(self.fund_txout_e.text())
@@ -152,34 +140,7 @@ class LastWillContractManager:
     #     show_transaction(tx, self.main_window,
     #                      desc,
     #                      prompt_if_unsaved=True)
-    def makeinput(self, prevout_hash, prevout_n, value):
-        """
-        Construct an unsigned input for adding to a transaction. scriptSig is
-        set to a dummy value, for size estimation.
 
-        (note: Transaction object will fail to broadcast until you sign and run `completetx`)
-        """
-
-        scriptSig = self.dummy_scriptsig_redeem
-        pubkey = self.public
-        flag=2**22       # 2^22 means the sequence is in time not in blocks
-        relative_time= 21   # 7 times 512s is 1h
-        seq=flag+relative_time
-        txin = dict(
-            prevout_hash = prevout_hash,
-            prevout_n = prevout_n,
-            sequence = 0,
-            scriptSig = scriptSig,
-
-            type = 'unknown',
-            address = self.contract.address,
-            scriptCode = self.contract.redeemscript.hex(),
-            num_sig = 1,
-            signatures = [None],
-            x_pubkeys = pubkey,
-            value = value,
-            )
-        return txin
 
     def signtx(self, tx):
         """generic tx signer for compressed pubkey"""
@@ -202,11 +163,11 @@ class LastWillContractManager:
             if not sig:
                 continue
             sig = bytes.fromhex(sig)
-            if txin['scriptSig'] == self.dummy_scriptsig_redeem:
+            if txin['scriptSig'] == self.dummy_scriptsig:
                 script = [
                     len(pub), pub,
                     len(sig), sig,
-                    len(self.contract.redeemscript), self.contract.redeemscript, # Script shorter than 75 bits
+                    76, len(self.contract.redeemscript), self.contract.redeemscript, # Script shorter than 75 bits
                     ]
             txin['scriptSig'] = joinbytes(script).hex()
         # need to update the raw, otherwise weird stuff happens.

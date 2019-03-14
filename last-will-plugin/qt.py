@@ -80,7 +80,7 @@ class Plugin(BasePlugin):
 
     def add_ui_for_wallet(self, wallet_name, window):
         from .ui import Intro
-        l = Intro(window, self, wallet_name, address=None,manager=None)
+        l = Intro(window, self, wallet_name, password=None,manager=None)
         tab = window.create_list_tab(l)
         self.lw_tabs[wallet_name] = tab
         self.lw_tab[wallet_name] = l

@@ -6,6 +6,7 @@ from itertools import permutations
 def find_contract(wallet):
     """Searching transactions for the one maching contract
     by creating contracts from outputs"""
+    contracts=[]
     for hash, t in wallet.transactions.items():
         out = t.outputs()
         address=''
@@ -15,8 +16,10 @@ def find_contract(wallet):
             for c in candidates:
                 will = LastWillContract(c)
                 if will.address.to_ui_string()==address:
-                    print("returning")
-                    return t, will, find_my_role(c, wallet)
+                    r=wallet.network.synchronous_get(
+                        ("blockchain.scripthash.listunspent", [will.address.to_scripthash_hex()]))
+                    contracts.append(( r, will, find_my_role(c, wallet)))
+    return contracts
 
 
 def get_contract_address(outputs):
@@ -25,7 +28,6 @@ def get_contract_address(outputs):
         if not isinstance(o[1],Address):
             continue
         if o[1].kind==1:
-            print("got address")
             return o[1].to_ui_string()
 
 def get_candidates(outputs):
@@ -37,7 +39,6 @@ def get_candidates(outputs):
         if o1[1].kind or o2[1].kind or o3[1].kind:
             continue
         candidates.append([o1[1],o2[1],o3[1]])
-    print("got candidates")
     return candidates
 
 def find_my_role(candidates, wallet):

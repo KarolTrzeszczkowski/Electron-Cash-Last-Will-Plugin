@@ -14,10 +14,11 @@ from electroncash.util import print_error, print_stderr, NotEnoughFunds
 from electroncash_gui.qt.transaction_dialog import show_transaction
 from .contract_finder import find_contract
 from .last_will_contract import LastWillContractManager
+import time
 
 
 class Intro(QDialog, MessageBoxMixin):
-    def __init__(self, parent, plugin, wallet_name, address, manager=None):
+    def __init__(self, parent, plugin, wallet_name, password, manager=None):
         QDialog.__init__(self, parent)
         self.main_window = parent
         self.wallet=parent.wallet
@@ -34,7 +35,7 @@ class Intro(QDialog, MessageBoxMixin):
         vbox.addWidget(l)
         vbox.addLayout(hbox)
         b = QPushButton(_("Create new Last Will contract"))
-        b.clicked.connect(lambda : switch_to(Creating, self.main_window, self.plugin, self.wallet_name,self.manager))
+        b.clicked.connect(lambda : switch_to(Creating, self.main_window, self.plugin, self.wallet_name,None,self.manager))
         hbox.addWidget(b)
 
         b = QPushButton(_("Find existing Last Will"))
@@ -43,8 +44,9 @@ class Intro(QDialog, MessageBoxMixin):
         vbox.addStretch(1)
 
     def handle_finding(self):
+        print(find_contract(self.wallet))
         try:
-            self.contractTx, self.contract, role = find_contract(self.wallet)
+            self.contractTx, self.contract, role = find_contract(self.wallet)[0] # grab first contract, multicontract support later
         except:
             print("No contract")
         else:
@@ -57,7 +59,7 @@ class Intro(QDialog, MessageBoxMixin):
             priv = self.wallet.keystore.get_private_key(i, self.password)[0]
             public = self.wallet.get_public_keys(self.contract.addresses[role])
             self.manager = LastWillContractManager(self.contractTx, self.contract, public, priv, role)
-            switch_to(Manage,self.main_window, self.plugin, self.wallet_name,self.manager)
+            switch_to(Manage,self.main_window, self.plugin, self.wallet_name,self.password,self.manager)
 
 
 
@@ -68,7 +70,7 @@ class Creating(QDialog, MessageBoxMixin):
     search_done_signal = pyqtSignal(object)
 
 
-    def __init__(self, parent, plugin, wallet_name, address, manager):
+    def __init__(self, parent, plugin, wallet_name, password, manager):
         QDialog.__init__(self, parent)
         self.main_window = parent
         self.wallet=parent.wallet
@@ -128,7 +130,7 @@ class Creating(QDialog, MessageBoxMixin):
         self.cold_address_wid.textEdited.connect(self.inheritance_info_changed)
         grid.addWidget(self.cold_address_wid, 3, 0)
         b = QPushButton(_("Create Last Will"))
-        b.clicked.connect(lambda: self.create_last_will())
+        b.clicked.connect(lambda: self.create_last_will2())
         vbox.addStretch(1)
         vbox.addWidget(b)
         self.create_button = b
@@ -167,14 +169,54 @@ class Creating(QDialog, MessageBoxMixin):
         tx.version=2
         show_transaction(tx, self.main_window, "Make Last Will contract", prompt_if_unsaved=True)
 
+    def create_last_will2(self, ):
+
+        outputs = [(TYPE_SCRIPT, ScriptOutput(make_opreturn(self.contract.address.to_ui_string().encode('utf8'))),0),
+                   (TYPE_ADDRESS, self.refresh_address, self.value+190),
+                   (TYPE_ADDRESS, self.cold_address, 546),
+                   (TYPE_ADDRESS, self.inheritor_address, 546),]
+        try:
+            tx = self.wallet.mktx(outputs, self.password, self.config,
+                                  domain=self.fund_domain, change_addr=self.fund_change_address)
+            id = tx.txid()
+        except NotEnoughFunds:
+            return self.show_critical(_("Not enough balance to fund smart contract."))
+        except Exception as e:
+            return self.show_critical(repr(e))
+
+        self.main_window.network.broadcast_transaction2(tx) #preparing transaction, contract can't give a change
+        coin = self.wait_for_coin(id,10)
+        self.wallet.add_input_info(coin)
+        inputs = [coin]
+        outputs = [(TYPE_ADDRESS, self.contract.address, self.value)]
+        tx = Transaction.from_io(inputs, outputs, locktime=0)
+        tx.version=2
+        show_transaction(tx, self.main_window, "Make Last Will contract", prompt_if_unsaved=True)
+
+    def wait_for_coin(self, id, timeout):
+        for j in range(timeout):
+            coins = self.wallet.get_spendable_coins(None, self.config)
+            for c in coins:
+                if c.get('prevout_hash') == id:
+                    return c
+            time.sleep(1)
+            print("Waiting for coin: "+str(j)+"s")
+        return None
+
+
+
+
+
+
 
 
 class Manage(QDialog, MessageBoxMixin):
     search_done_signal = pyqtSignal(object)
 
 
-    def __init__(self, parent, plugin, wallet_name, address, manager):
+    def __init__(self, parent, plugin, wallet_name, password, manager):
         QDialog.__init__(self, parent)
+        self.password=password
         self.main_window = parent
         self.wallet=parent.wallet
         self.plugin = plugin
@@ -185,17 +227,44 @@ class Manage(QDialog, MessageBoxMixin):
         self.setLayout(vbox)
         if self.manager.mode==0:
             mode="refreshing"
+            b = QPushButton(_("Refresh"))
+            b.clicked.connect(self.refresh)
         elif self.manager.mode==1:
             mode="cold"
+            b = QPushButton(_("Spend"))
+            #b.clicked.connect(self.refresh)
         elif self.manager.mode==2:
             mode="inheritor"
+            b = QPushButton(_("Inherit"))
+            #b.clicked.connect(self.refresh)
         l = QLabel("<b>%s</b>" % (_("This is :" + mode)))
         vbox.addWidget(l)
+        vbox.addWidget(b)
+
+    def refresh(self):
+        if self.manager.mode!=0:
+
+            print("This wallet can't refresh a contract!")
+            return 0
+        locktime = 0
+        coin=self.wallet.get_spendable_coins(None,self.config)[0]
+        self.wallet.add_input_info(coin)
+        inputs = [self.manager.txin,coin]
+        invalue = self.manager.value
+        outputs = [(TYPE_ADDRESS, self.manager.contract.address, invalue)]
+        tx = Transaction.from_io(inputs, outputs, locktime)
+        self.manager.signtx(tx)
+        self.wallet.sign_transaction(tx, self.password)
+        self.manager.completetx(tx)
+        desc = "Refreshed Last Will"
+        show_transaction(tx, self.main_window,
+                         desc,
+                         prompt_if_unsaved=True)
 
 
 
-def switch_to(mode, main_window, plugin, wallet_name,manager):
-    l = mode(main_window, plugin, wallet_name, address=None,manager=manager)
+def switch_to(mode, main_window, plugin, wallet_name,password,manager):
+    l = mode(main_window, plugin, wallet_name, password=password, manager=manager)
     tab = main_window.create_list_tab(l)
     i = main_window.tabs.indexOf(plugin.lw_tabs.get(wallet_name, None))
 
