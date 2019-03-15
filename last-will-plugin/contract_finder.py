@@ -1,5 +1,5 @@
 from .last_will_contract import LastWillContract
-from electroncash.address import Address
+from electroncash.address import Address, ScriptOutput
 from itertools import permutations
 
 
@@ -10,7 +10,7 @@ def find_contract(wallet):
     for hash, t in wallet.transactions.items():
         out = t.outputs()
         address=''
-        if len(out) >4:
+        if len(out) >3:
             address=get_contract_address(out)
             candidates=get_candidates(out)
             for c in candidates:
@@ -18,6 +18,8 @@ def find_contract(wallet):
                 if will.address.to_ui_string()==address:
                     r=wallet.network.synchronous_get(
                         ("blockchain.scripthash.listunspent", [will.address.to_scripthash_hex()]))
+                    if len(r)==0: #skip unfunded and ended contracts
+                        continue
                     contracts.append(( r, will, find_my_role(c, wallet)))
     return contracts
 
@@ -25,10 +27,11 @@ def find_contract(wallet):
 def get_contract_address(outputs):
     """Finds p2sh output"""
     for o in outputs:
-        if not isinstance(o[1],Address):
-            continue
-        if o[1].kind==1:
-            return o[1].to_ui_string()
+        if isinstance(o[1],ScriptOutput):
+            try:
+                return o[1].to_ui_string().split("'")[1]
+            except:
+                pass
 
 def get_candidates(outputs):
     """Creates all permutations of addresses that are not p2sh type"""

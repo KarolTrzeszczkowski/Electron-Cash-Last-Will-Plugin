@@ -12,14 +12,14 @@ def joinbytes(iterable):
 
 
 class LastWillContract:
-    """Contract of last will, that is timelocked for inheritor unless the creator bump it
+    """Contract of last will, that is timelocked for inheritor unless the creator refresh it
     from the hot wallet or spend from the cold wallet."""
 
     def __init__(self, addresses):
         self.time1=7
         self.time2=0
         self.addresses=addresses
-        self.redeemscript = joinbytes([
+        self.redeemscript2 = joinbytes([
             len(addresses[0].hash160), addresses[0].hash160,
             len(addresses[1].hash160), addresses[1].hash160,
             len(addresses[2].hash160), addresses[2].hash160,
@@ -28,20 +28,55 @@ class LastWillContract:
                 5, Op.OP_PICK, Op.OP_HASH160, 3, Op.OP_PICK,
                 Op.OP_EQUALVERIFY, 4, Op.OP_PICK, 6, Op.OP_PICK,
                 Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-                Op.OP_ELSE,
+            Op.OP_ELSE,
                 3, Op.OP_PICK, 2, Op.OP_EQUAL,
                 Op.OP_IF,
                     5, Op.OP_PICK, Op.OP_HASH160, 2, Op.OP_PICK,
                     Op.OP_EQUALVERIFY, 4, Op.OP_PICK, 6, Op.OP_PICK, Op.OP_CHECKSIG,
                     Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-                    Op.OP_ELSE,
+                Op.OP_ELSE,
                     3, Op.OP_PICK, 3, Op.OP_EQUAL,
                     Op.OP_IF,
                         3, self.time1, self.time2, 64, Op.OP_CHECKSEQUENCEVERIFY, Op.OP_DROP,
                         5, Op.OP_PICK, Op.OP_HASH160, Op.OP_OVER, Op.OP_EQUALVERIFY, 4, Op.OP_PICK,
                         Op.OP_6, Op.OP_PICK, Op.OP_CHECKSIG,
                         Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-                        Op.OP_ELSE,
+                    Op.OP_ELSE,
+                        Op.OP_FALSE,
+                    Op.OP_ENDIF,
+                Op.OP_ENDIF,
+            Op.OP_ENDIF
+        ])
+
+        self.redeemscript = joinbytes([
+            len(addresses[0].hash160), addresses[0].hash160,
+            len(addresses[1].hash160), addresses[1].hash160,
+            len(addresses[2].hash160), addresses[2].hash160,
+            Op.OP_3, Op.OP_PICK, Op.OP_TRUE, Op.OP_EQUAL,
+            Op.OP_IF,
+                Op.OP_6, Op.OP_PICK, Op.OP_HASH160, Op.OP_3,
+                Op.OP_PICK, Op.OP_EQUALVERIFY, Op.OP_5, Op.OP_PICK, Op.OP_7, Op.OP_PICK, Op.OP_CHECKSIGVERIFY, Op.OP_5,
+                Op.OP_PICK, Op.OP_5, Op.OP_PICK, Op.OP_8, Op.OP_PICK, Op.OP_CHECKDATASIGVERIFY, Op.OP_4, Op.OP_PICK,
+                Op.OP_4, Op.OP_SPLIT, Op.OP_DROP, Op.OP_5, Op.OP_PICK, Op.OP_6, Op.OP_PICK, Op.OP_SIZE, Op.OP_NIP,
+                40, Op.OP_SUB, Op.OP_SPLIT, Op.OP_NIP, Op.OP_DUP, 32, Op.OP_SPLIT, Op.OP_DROP, Op.OP_7,
+                Op.OP_PICK, Op.OP_8, Op.OP_PICK, Op.OP_SIZE, Op.OP_NIP, 44, Op.OP_SUB, Op.OP_SPLIT, Op.OP_DROP,
+                Op.OP_DUP, 104, Op.OP_SPLIT, Op.OP_NIP, Op.OP_DUP, Op.OP_OVER, Op.OP_SIZE, Op.OP_NIP, Op.OP_8,
+                Op.OP_SUB, Op.OP_SPLIT, Op.OP_6, Op.OP_PICK, Op.OP_BIN2NUM, Op.OP_2, Op.OP_GREATERTHANOREQUAL, Op.OP_VERIFY,
+                Op.OP_DUP, Op.OP_2, Op.OP_PICK, Op.OP_CAT, Op.OP_HASH256, Op.OP_5, Op.OP_PICK, Op.OP_EQUAL, Op.OP_NIP,
+                Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+                Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+            Op.OP_ELSE,
+                    Op.OP_3, Op.OP_PICK, Op.OP_2, Op.OP_EQUAL,
+                Op.OP_IF,
+                    Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_2, Op.OP_PICK, Op.OP_EQUALVERIFY, Op.OP_4, Op.OP_PICK, Op.OP_6,
+                    Op.OP_PICK, Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+                Op.OP_ELSE,
+                        Op.OP_3, Op.OP_PICK, Op.OP_3, Op.OP_EQUAL,
+                    Op.OP_IF,
+                        7, 0, 64, Op.OP_CHECKSEQUENCEVERIFY,
+                        Op.OP_DROP, Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_OVER, Op.OP_EQUALVERIFY, Op.OP_4, Op.OP_PICK, Op.OP_6,
+                        Op.OP_PICK, Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+                    Op.OP_ELSE,
                         Op.OP_FALSE,
                     Op.OP_ENDIF,
                 Op.OP_ENDIF,
@@ -81,66 +116,6 @@ class LastWillContractManager:
             )
 
 
-    # def spend(self):
-    #     prevout_hash = self.fund_txid_e.text()
-    #     prevout_n = int(self.fund_txout_e.text())
-    #     value = int(self.fund_value_e.text())
-    #     locktime = 0
-    #     estimate_fee = lambda x: (1 * x)
-    #     out_addr = Address.from_string(self.redeem_address_e.text())
-    #
-    #     # generate the special spend
-    #     inp = self.contract.makeinput(prevout_hash, prevout_n, value)
-    #
-    #     inputs = [inp]
-    #     invalue = value
-    #
-    #     outputs = [(TYPE_ADDRESS, out_addr, 0)]
-    #     tx1 = Transaction.from_io(inputs, outputs, locktime)
-    #     txsize = len(tx1.serialize(True)) // 2
-    #     fee = estimate_fee(txsize)
-    #
-    #     outputs = [(TYPE_ADDRESS, out_addr, invalue - fee)]
-    #     tx = Transaction.from_io(inputs, outputs, locktime)
-    #     self.contract.signtx(tx)
-    #     self.wallet.sign_transaction(tx, self.password)
-    #     self.contract.completetx(tx)
-    #
-    #     desc = "Ended Last Will Contract"
-    #     show_transaction(tx, self.main_window,
-    #                      desc,
-    #                      prompt_if_unsaved=True)
-    #
-    # def inherit(self):
-    #     prevout_hash = self.fund_txid_e.text()
-    #     prevout_n = int(self.fund_txout_e.text())
-    #     value = int(self.fund_value_e.text())
-    #     locktime = 0
-    #     estimate_fee = lambda x: (1 * x)
-    #     out_addr = Address.from_string(self.redeem_address_e.text())
-    #
-    #     # generate the special spend
-    #     inp = self.contract.makeinput(prevout_hash, prevout_n, value)
-    #
-    #     inputs = [inp]
-    #     invalue = value
-    #
-    #     outputs = [(TYPE_ADDRESS, out_addr, 0)]
-    #     tx1 = Transaction.from_io(inputs, outputs, locktime)
-    #     txsize = len(tx1.serialize(True)) // 2
-    #     fee = estimate_fee(txsize)
-    #
-    #     outputs = [(TYPE_ADDRESS, out_addr, invalue - fee)]
-    #     tx = Transaction.from_io(inputs, outputs, locktime)
-    #     self.contract.signtx(tx)
-    #     self.wallet.sign_transaction(tx, self.password)
-    #     self.contract.completetx(tx)
-    #
-    #     desc = "Inherited From Last Will"
-    #     show_transaction(tx, self.main_window,
-    #                      desc,
-    #                      prompt_if_unsaved=True)
-
 
     def signtx(self, tx):
         """generic tx signer for compressed pubkey"""
@@ -167,6 +142,35 @@ class LastWillContractManager:
                 script = [
                     len(pub), pub,
                     len(sig), sig,
+                    76, len(self.contract.redeemscript), self.contract.redeemscript, # Script shorter than 75 bits
+                    ]
+            txin['scriptSig'] = joinbytes(script).hex()
+        # need to update the raw, otherwise weird stuff happens.
+        tx.raw = tx.serialize()
+
+    def completetx_ref(self, tx):
+
+        pub = bytes.fromhex(self.public[0])
+        index=0
+        for i, inp in enumerate(tx.inputs()):
+            if inp.get('address').kind==1:
+                index=i
+        preimage=bytes.fromhex(tx.serialize_preimage(index))
+        print("Preimage:")
+        print(preimage)
+        for txin in tx.inputs():
+            # find matching inputs
+            if txin['address'] != self.contract.address:
+                continue
+            sig = txin['signatures'][0]
+            if not sig:
+                continue
+            sig = bytes.fromhex(sig)
+            if txin['scriptSig'] == self.dummy_scriptsig:
+                script = [
+                    len(pub), pub,
+                    len(sig), sig,
+                    77, len(preimage).to_bytes(2, byteorder='little'), preimage,
                     76, len(self.contract.redeemscript), self.contract.redeemscript, # Script shorter than 75 bits
                     ]
             txin['scriptSig'] = joinbytes(script).hex()

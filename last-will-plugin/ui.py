@@ -35,7 +35,7 @@ class Intro(QDialog, MessageBoxMixin):
         vbox.addWidget(l)
         vbox.addLayout(hbox)
         b = QPushButton(_("Create new Last Will contract"))
-        b.clicked.connect(lambda : switch_to(Creating, self.main_window, self.plugin, self.wallet_name,None,self.manager))
+        b.clicked.connect(lambda : switch_to(Create, self.main_window, self.plugin, self.wallet_name, None, self.manager))
         hbox.addWidget(b)
 
         b = QPushButton(_("Find existing Last Will"))
@@ -66,7 +66,7 @@ class Intro(QDialog, MessageBoxMixin):
 
 
 
-class Creating(QDialog, MessageBoxMixin):
+class Create(QDialog, MessageBoxMixin):
     search_done_signal = pyqtSignal(object)
 
 
@@ -130,7 +130,7 @@ class Creating(QDialog, MessageBoxMixin):
         self.cold_address_wid.textEdited.connect(self.inheritance_info_changed)
         grid.addWidget(self.cold_address_wid, 3, 0)
         b = QPushButton(_("Create Last Will"))
-        b.clicked.connect(lambda: self.create_last_will2())
+        b.clicked.connect(lambda: self.create_last_will())
         vbox.addStretch(1)
         vbox.addWidget(b)
         self.create_button = b
@@ -152,24 +152,8 @@ class Creating(QDialog, MessageBoxMixin):
             self.contract=LastWillContract(addresses)
 
 
+
     def create_last_will(self, ):
-        outputs = [(TYPE_ADDRESS, self.contract.address, self.value),
-                   #(TYPE_SCRIPT, ScriptOutput(make_opreturn(self.contract.redeemscript)),0),
-                   (TYPE_ADDRESS, self.refresh_address, 546),
-                   (TYPE_ADDRESS, self.cold_address, 546),
-                   (TYPE_ADDRESS, self.inheritor_address, 546),]
-
-        try:
-            tx = self.wallet.mktx(outputs, self.password, self.config,
-                                  domain=self.fund_domain, change_addr=self.fund_change_address)
-        except NotEnoughFunds:
-            return self.show_critical(_("Not enough balance to fund smart contract."))
-        except Exception as e:
-            return self.show_critical(repr(e))
-        tx.version=2
-        show_transaction(tx, self.main_window, "Make Last Will contract", prompt_if_unsaved=True)
-
-    def create_last_will2(self, ):
 
         outputs = [(TYPE_SCRIPT, ScriptOutput(make_opreturn(self.contract.address.to_ui_string().encode('utf8'))),0),
                    (TYPE_ADDRESS, self.refresh_address, self.value+190),
@@ -184,7 +168,8 @@ class Creating(QDialog, MessageBoxMixin):
         except Exception as e:
             return self.show_critical(repr(e))
 
-        self.main_window.network.broadcast_transaction2(tx) #preparing transaction, contract can't give a change
+        # preparing transaction, contract can't give a change
+        self.main_window.network.broadcast_transaction2(tx)
         coin = self.wait_for_coin(id,10)
         self.wallet.add_input_info(coin)
         inputs = [coin]
@@ -193,20 +178,17 @@ class Creating(QDialog, MessageBoxMixin):
         tx.version=2
         show_transaction(tx, self.main_window, "Make Last Will contract", prompt_if_unsaved=True)
 
+
     def wait_for_coin(self, id, timeout):
         for j in range(timeout):
             coins = self.wallet.get_spendable_coins(None, self.config)
             for c in coins:
                 if c.get('prevout_hash') == id:
-                    return c
+                    if c.get('value')==self.value+190:
+                        return c
             time.sleep(1)
             print("Waiting for coin: "+str(j)+"s")
         return None
-
-
-
-
-
 
 
 
@@ -225,6 +207,7 @@ class Manage(QDialog, MessageBoxMixin):
         self.manager=manager
         vbox = QVBoxLayout()
         self.setLayout(vbox)
+        self.fee=1000
         if self.manager.mode==0:
             mode="refreshing"
             b = QPushButton(_("Refresh"))
@@ -246,20 +229,45 @@ class Manage(QDialog, MessageBoxMixin):
 
             print("This wallet can't refresh a contract!")
             return 0
-        locktime = 0
-        coin=self.wallet.get_spendable_coins(None,self.config)[0]
+        coin=None
+        coins = self.wallet.get_spendable_coins(None, self.config)
+        for c in coins:
+            if c.get('value')==self.fee:
+                coin=c
+        if not coin:
+            outputs = [(TYPE_ADDRESS, self.manager.contract.addresses[0], self.fee),]
+            try:
+                tx = self.wallet.mktx(outputs, self.password, self.config,
+                                      domain=None, change_addr=None)
+                id = tx.txid()
+            except NotEnoughFunds:
+                return self.show_critical(_("Not enough balance to refresh smart contract."))
+            except Exception as e:
+                return self.show_critical(repr(e))
+            # preparing transaction, contract can't give a change
+            self.main_window.network.broadcast_transaction2(tx)
+            coin = self.wait_for_coin(id, 30)
         self.wallet.add_input_info(coin)
         inputs = [self.manager.txin,coin]
-        invalue = self.manager.value
-        outputs = [(TYPE_ADDRESS, self.manager.contract.address, invalue)]
-        tx = Transaction.from_io(inputs, outputs, locktime)
+        outputs = [(TYPE_ADDRESS, self.manager.contract.address, self.manager.value)]
+        tx = Transaction.from_io(inputs, outputs, locktime=0)
+        tx.version = 2
         self.manager.signtx(tx)
         self.wallet.sign_transaction(tx, self.password)
-        self.manager.completetx(tx)
-        desc = "Refreshed Last Will"
-        show_transaction(tx, self.main_window,
-                         desc,
-                         prompt_if_unsaved=True)
+        self.manager.completetx_ref(tx)
+        show_transaction(tx, self.main_window, "Refresh Last Will contract", prompt_if_unsaved=True)
+        switch_to(Intro, self.main_window,self.plugin, self.wallet_name,None,None)
+
+    def wait_for_coin(self, id, timeout):
+        for j in range(timeout):
+            coins = self.wallet.get_spendable_coins(None, self.config)
+            for c in coins:
+                if c.get('prevout_hash') == id:
+                    if c.get('value')==self.fee:
+                        return c
+            time.sleep(1)
+            print("Waiting for coin: " + str(j) + "s")
+        return None
 
 
 
