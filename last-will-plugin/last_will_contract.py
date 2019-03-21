@@ -1,7 +1,9 @@
 from ecdsa.ecdsa import curve_secp256k1, generator_secp256k1
-from electroncash.bitcoin import ser_to_point, point_to_ser
+from electroncash.bitcoin import regenerate_key, MySigningKey, Hash
 from electroncash.address import Address, Script, hash160, ScriptOutput, OpCodes
 from electroncash.address import OpCodes as Op
+import ecdsa
+from electroncash.util import bh2u
 import hashlib
 import time
 LOCKTIME_THRESHOLD = 500000000
@@ -19,34 +21,6 @@ class LastWillContract:
         self.time1=7
         self.time2=0
         self.addresses=addresses
-        self.redeemscript2 = joinbytes([
-            len(addresses[0].hash160), addresses[0].hash160,
-            len(addresses[1].hash160), addresses[1].hash160,
-            len(addresses[2].hash160), addresses[2].hash160,
-            3, Op.OP_PICK, Op.OP_TRUE, Op.OP_EQUAL,
-            Op.OP_IF,
-                5, Op.OP_PICK, Op.OP_HASH160, 3, Op.OP_PICK,
-                Op.OP_EQUALVERIFY, 4, Op.OP_PICK, 6, Op.OP_PICK,
-                Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-            Op.OP_ELSE,
-                3, Op.OP_PICK, 2, Op.OP_EQUAL,
-                Op.OP_IF,
-                    5, Op.OP_PICK, Op.OP_HASH160, 2, Op.OP_PICK,
-                    Op.OP_EQUALVERIFY, 4, Op.OP_PICK, 6, Op.OP_PICK, Op.OP_CHECKSIG,
-                    Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-                Op.OP_ELSE,
-                    3, Op.OP_PICK, 3, Op.OP_EQUAL,
-                    Op.OP_IF,
-                        3, self.time1, self.time2, 64, Op.OP_CHECKSEQUENCEVERIFY, Op.OP_DROP,
-                        5, Op.OP_PICK, Op.OP_HASH160, Op.OP_OVER, Op.OP_EQUALVERIFY, 4, Op.OP_PICK,
-                        Op.OP_6, Op.OP_PICK, Op.OP_CHECKSIG,
-                        Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-                    Op.OP_ELSE,
-                        Op.OP_FALSE,
-                    Op.OP_ENDIF,
-                Op.OP_ENDIF,
-            Op.OP_ENDIF
-        ])
 
         self.redeemscript = joinbytes([
             len(addresses[0].hash160), addresses[0].hash160,
@@ -54,33 +28,31 @@ class LastWillContract:
             len(addresses[2].hash160), addresses[2].hash160,
             Op.OP_3, Op.OP_PICK, Op.OP_TRUE, Op.OP_EQUAL,
             Op.OP_IF,
-                Op.OP_6, Op.OP_PICK, Op.OP_HASH160, Op.OP_3,
-                Op.OP_PICK, Op.OP_EQUALVERIFY, Op.OP_5, Op.OP_PICK, Op.OP_7, Op.OP_PICK, Op.OP_CHECKSIGVERIFY, Op.OP_5,
-                Op.OP_PICK, Op.OP_5, Op.OP_PICK, Op.OP_8, Op.OP_PICK, Op.OP_CHECKDATASIGVERIFY, Op.OP_4, Op.OP_PICK,
-                Op.OP_4, Op.OP_SPLIT, Op.OP_DROP, Op.OP_5, Op.OP_PICK, Op.OP_6, Op.OP_PICK, Op.OP_SIZE, Op.OP_NIP,
-                40, Op.OP_SUB, Op.OP_SPLIT, Op.OP_NIP, Op.OP_DUP, 32, Op.OP_SPLIT, Op.OP_DROP, Op.OP_7,
-                Op.OP_PICK, Op.OP_8, Op.OP_PICK, Op.OP_SIZE, Op.OP_NIP, 44, Op.OP_SUB, Op.OP_SPLIT, Op.OP_DROP,
-                Op.OP_DUP, 104, Op.OP_SPLIT, Op.OP_NIP, Op.OP_DUP, Op.OP_OVER, Op.OP_SIZE, Op.OP_NIP, Op.OP_8,
-                Op.OP_SUB, Op.OP_SPLIT, Op.OP_6, Op.OP_PICK, Op.OP_BIN2NUM, Op.OP_2, Op.OP_GREATERTHANOREQUAL, Op.OP_VERIFY,
-                Op.OP_DUP, Op.OP_2, Op.OP_PICK, Op.OP_CAT, Op.OP_HASH256, Op.OP_5, Op.OP_PICK, Op.OP_EQUAL, Op.OP_NIP,
-                Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-                Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+            Op.OP_6, Op.OP_PICK, Op.OP_HASH160, Op.OP_3, Op.OP_PICK, Op.OP_EQUALVERIFY, Op.OP_5, Op.OP_PICK, Op.OP_7,
+            Op.OP_PICK, Op.OP_CHECKSIGVERIFY, Op.OP_5, Op.OP_PICK, Op.OP_6, Op.OP_PICK, Op.OP_SIZE, Op.OP_NIP,
+            Op.OP_TRUE, Op.OP_SUB, Op.OP_SPLIT, Op.OP_DROP, Op.OP_DUP, Op.OP_6, Op.OP_PICK, Op.OP_HASH256, Op.OP_9,
+            Op.OP_PICK, Op.OP_CHECKDATASIGVERIFY, 2, 232, 3, Op.OP_6, Op.OP_PICK, Op.OP_4, Op.OP_SPLIT, Op.OP_DROP,
+            Op.OP_7, Op.OP_PICK, Op.OP_8, Op.OP_PICK, Op.OP_SIZE, Op.OP_NIP, 1, 40, Op.OP_SUB, Op.OP_SPLIT, Op.OP_NIP,
+            Op.OP_DUP, 1, 32, Op.OP_SPLIT, Op.OP_DROP, Op.OP_9, Op.OP_PICK, Op.OP_10, Op.OP_PICK, Op.OP_SIZE, Op.OP_NIP,
+            1, 44, Op.OP_SUB, Op.OP_SPLIT, Op.OP_DROP, Op.OP_DUP, 1, 104, Op.OP_SPLIT, Op.OP_NIP, Op.OP_DUP, Op.OP_OVER,
+            Op.OP_SIZE, Op.OP_NIP, Op.OP_8, Op.OP_SUB, Op.OP_SPLIT, Op.OP_DUP, Op.OP_BIN2NUM, Op.OP_8, Op.OP_PICK,
+            Op.OP_SUB, Op.OP_8, Op.OP_NUM2BIN, Op.OP_7, Op.OP_PICK, Op.OP_BIN2NUM, Op.OP_2, Op.OP_GREATERTHANOREQUAL,
+            Op.OP_VERIFY, Op.OP_DUP, Op.OP_3, Op.OP_PICK, Op.OP_CAT, Op.OP_HASH256, Op.OP_6, Op.OP_PICK, Op.OP_EQUAL,
+            Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+            Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
             Op.OP_ELSE,
-                    Op.OP_3, Op.OP_PICK, Op.OP_2, Op.OP_EQUAL,
-                Op.OP_IF,
-                    Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_2, Op.OP_PICK, Op.OP_EQUALVERIFY, Op.OP_4, Op.OP_PICK, Op.OP_6,
-                    Op.OP_PICK, Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-                Op.OP_ELSE,
-                        Op.OP_3, Op.OP_PICK, Op.OP_3, Op.OP_EQUAL,
-                    Op.OP_IF,
-                        7, 0, 64, Op.OP_CHECKSEQUENCEVERIFY,
-                        Op.OP_DROP, Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_OVER, Op.OP_EQUALVERIFY, Op.OP_4, Op.OP_PICK, Op.OP_6,
-                        Op.OP_PICK, Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-                    Op.OP_ELSE,
-                        Op.OP_FALSE,
-                    Op.OP_ENDIF,
-                Op.OP_ENDIF,
-            Op.OP_ENDIF
+            Op.OP_3, Op.OP_PICK, Op.OP_2, Op.OP_EQUAL,
+            Op.OP_IF,
+            Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_2, Op.OP_PICK, Op.OP_EQUALVERIFY, Op.OP_4, Op.OP_PICK, Op.OP_6,
+            Op.OP_PICK, Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+            Op.OP_ELSE,
+            Op.OP_3, Op.OP_PICK, Op.OP_3, Op.OP_EQUAL,
+            Op.OP_IF,
+            3, 7, 0, 64, Op.OP_CHECKSEQUENCEVERIFY, Op.OP_DROP, Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_OVER,
+            Op.OP_EQUALVERIFY, Op.OP_4, Op.OP_PICK, Op.OP_6, Op.OP_PICK, Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP,
+            Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+            Op.OP_ELSE,
+            Op.OP_FALSE, Op.OP_ENDIF, Op.OP_ENDIF, Op.OP_ENDIF
         ])
 
         assert 76 < len(self.redeemscript) <= 255  # simplify push in scriptsig; note len is around 200.
@@ -96,11 +68,12 @@ class LastWillContractManager:
         self.public = pub
         self.keypair = {pub[0]: (priv, True)}
         self.contract = contract
-        self.dummy_scriptsig = '01' * (140 + len(self.contract.redeemscript))  # make dummy scripts of correct size for size estimation.
+        self.dummy_scriptsig = '00'*(74 + len(self.contract.redeemscript))
         self.sequence=0
+        #if mode == 2:
+        #    self.sequence=2**22+self.contract.time1
         self.value=int(self.tx.get('value'))
-        if mode==2:
-            self.sequence=self.contract.time1+2**22
+
         self.txin = dict(
             prevout_hash = self.tx.get('tx_hash'),
             prevout_n = int(self.tx.get('tx_pos')),
@@ -142,8 +115,9 @@ class LastWillContractManager:
                 script = [
                     len(pub), pub,
                     len(sig), sig,
-                    76, len(self.contract.redeemscript), self.contract.redeemscript, # Script shorter than 75 bits
+                    Op.OP_2, 76, len(self.contract.redeemscript), self.contract.redeemscript,
                     ]
+                print("scriptSig length " + str(joinbytes(script).hex().__sizeof__()))
             txin['scriptSig'] = joinbytes(script).hex()
         # need to update the raw, otherwise weird stuff happens.
         tx.raw = tx.serialize()
@@ -151,29 +125,37 @@ class LastWillContractManager:
     def completetx_ref(self, tx):
 
         pub = bytes.fromhex(self.public[0])
-        index=0
-        for i, inp in enumerate(tx.inputs()):
-            if inp.get('address').kind==1:
-                index=i
-        preimage=bytes.fromhex(tx.serialize_preimage(index))
-        print("Preimage:")
-        print(preimage)
-        for txin in tx.inputs():
+
+        for i, txin in enumerate(tx.inputs()):
             # find matching inputs
             if txin['address'] != self.contract.address:
                 continue
+            preimage=bytes.fromhex(tx.serialize_preimage(i))
+            print("Preimage size:" + str(preimage.__sizeof__()))
             sig = txin['signatures'][0]
             if not sig:
                 continue
             sig = bytes.fromhex(sig)
+            print("Signature size:" + str(sig.__sizeof__()))
             if txin['scriptSig'] == self.dummy_scriptsig:
+                self.checkd_data_sig(sig,preimage,pub)
                 script = [
                     len(pub), pub,
                     len(sig), sig,
                     77, len(preimage).to_bytes(2, byteorder='little'), preimage,
-                    76, len(self.contract.redeemscript), self.contract.redeemscript, # Script shorter than 75 bits
+                    Op.OP_1, 76, len(self.contract.redeemscript), self.contract.redeemscript,
                     ]
+                print("scriptSig length "+ str(joinbytes(script).hex().__sizeof__()))
             txin['scriptSig'] = joinbytes(script).hex()
         # need to update the raw, otherwise weird stuff happens.
         tx.raw = tx.serialize()
+
+    def checkd_data_sig(self,sig,pre,pk):
+        sec, compressed = self.keypairs.get(pk)
+        pre_hash = Hash(pre)
+        pkey = regenerate_key(sec)
+        secexp = pkey.secret
+        private_key = MySigningKey.from_secret_exponent(secexp, curve=ecdsa.SECP256k1)
+        public_key = private_key.get_verifying_key()
+        assert public_key.verify_digest(sig, pre_hash, sigdecode=ecdsa.util.sigdecode_der)
 
