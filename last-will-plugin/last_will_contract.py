@@ -29,17 +29,19 @@ class LastWillContract:
             Op.OP_3, Op.OP_PICK, Op.OP_TRUE, Op.OP_EQUAL,
             Op.OP_IF,
             Op.OP_6, Op.OP_PICK, Op.OP_HASH160, Op.OP_3, Op.OP_PICK, Op.OP_EQUALVERIFY, Op.OP_5, Op.OP_PICK, Op.OP_7,
-            Op.OP_PICK, Op.OP_CHECKSIGVERIFY, Op.OP_5, Op.OP_PICK, Op.OP_6, Op.OP_PICK, Op.OP_SIZE, Op.OP_NIP,
-            Op.OP_TRUE, Op.OP_SUB, Op.OP_SPLIT, Op.OP_DROP, Op.OP_DUP, Op.OP_6, Op.OP_PICK, Op.OP_HASH256, Op.OP_9,
-            Op.OP_PICK, Op.OP_CHECKDATASIGVERIFY, 2, 232, 3, Op.OP_6, Op.OP_PICK, Op.OP_4, Op.OP_SPLIT, Op.OP_DROP,
-            Op.OP_7, Op.OP_PICK, Op.OP_8, Op.OP_PICK, Op.OP_SIZE, Op.OP_NIP, 1, 40, Op.OP_SUB, Op.OP_SPLIT, Op.OP_NIP,
-            Op.OP_DUP, 1, 32, Op.OP_SPLIT, Op.OP_DROP, Op.OP_9, Op.OP_PICK, Op.OP_10, Op.OP_PICK, Op.OP_SIZE, Op.OP_NIP,
-            1, 44, Op.OP_SUB, Op.OP_SPLIT, Op.OP_DROP, Op.OP_DUP, 1, 104, Op.OP_SPLIT, Op.OP_NIP, Op.OP_DUP, Op.OP_OVER,
-            Op.OP_SIZE, Op.OP_NIP, Op.OP_8, Op.OP_SUB, Op.OP_SPLIT, Op.OP_DUP, Op.OP_BIN2NUM, Op.OP_8, Op.OP_PICK,
-            Op.OP_SUB, Op.OP_8, Op.OP_NUM2BIN, Op.OP_7, Op.OP_PICK, Op.OP_BIN2NUM, Op.OP_2, Op.OP_GREATERTHANOREQUAL,
-            Op.OP_VERIFY, Op.OP_DUP, Op.OP_3, Op.OP_PICK, Op.OP_CAT, Op.OP_HASH256, Op.OP_6, Op.OP_PICK, Op.OP_EQUAL,
+            Op.OP_PICK, Op.OP_CHECKSIGVERIFY, Op.OP_5, Op.OP_PICK, Op.OP_SIZE, Op.OP_1SUB, Op.OP_SPLIT, Op.OP_DROP,
+            Op.OP_5, Op.OP_PICK, Op.OP_SHA256, Op.OP_8, Op.OP_PICK, Op.OP_CHECKDATASIGVERIFY, 2, 232, 3, Op.OP_5,
+            Op.OP_PICK, Op.OP_4, Op.OP_SPLIT, Op.OP_SPLIT, Op.OP_DROP, Op.OP_6, Op.OP_PICK, Op.OP_DUP, Op.OP_SIZE,
+            Op.OP_NIP, 1, 40, Op.OP_SUB, Op.OP_SPLIT, Op.OP_SPLIT, Op.OP_NIP, Op.OP_DUP, 1, 32, Op.OP_SPLIT,
+            Op.OP_SPLIT, Op.OP_DROP, Op.OP_8, Op.OP_PICK, Op.OP_DUP, Op.OP_SIZE, Op.OP_NIP, 1, 44, Op.OP_SUB,
+            Op.OP_SPLIT, Op.OP_SPLIT, Op.OP_DROP, Op.OP_DUP, 1, 104, Op.OP_SPLIT, Op.OP_SPLIT, Op.OP_NIP, Op.OP_DUP,
+            Op.OP_OVER, Op.OP_SIZE, Op.OP_NIP, Op.OP_8, Op.OP_SUB, Op.OP_SPLIT, Op.OP_DUP, Op.OP_BIN2NUM, Op.OP_8,
+            Op.OP_PICK, Op.OP_SUB, Op.OP_8, Op.OP_NUM2BIN, Op.OP_2, Op.OP_PICK, Op.OP_3, Op.OP_SPLIT, Op.OP_9,
+            Op.OP_PICK, Op.OP_BIN2NUM, Op.OP_2, Op.OP_GREATERTHANOREQUAL, Op.OP_VERIFY, Op.OP_2, Op.OP_PICK, Op.OP_2,
+            Op.OP_PICK, Op.OP_CAT, Op.OP_OVER, Op.OP_HASH160, Op.OP_CAT, Op.OP_HASH256, Op.OP_8, Op.OP_PICK,
+            Op.OP_EQUAL, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
             Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-            Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+            Op.OP_NIP,
             Op.OP_ELSE,
             Op.OP_3, Op.OP_PICK, Op.OP_2, Op.OP_EQUAL,
             Op.OP_IF,
@@ -53,6 +55,7 @@ class LastWillContract:
             Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
             Op.OP_ELSE,
             Op.OP_FALSE, Op.OP_ENDIF, Op.OP_ENDIF, Op.OP_ENDIF
+
         ])
 
         assert 76 < len(self.redeemscript) <= 255  # simplify push in scriptsig; note len is around 200.
@@ -131,14 +134,13 @@ class LastWillContractManager:
             if txin['address'] != self.contract.address:
                 continue
             preimage=bytes.fromhex(tx.serialize_preimage(i))
-            print("Preimage size:" + str(preimage.__sizeof__()))
             sig = txin['signatures'][0]
             if not sig:
                 continue
             sig = bytes.fromhex(sig)
-            print("Signature size:" + str(sig.__sizeof__()))
+            print("Signature size:" + str(len(sig)))
             if txin['scriptSig'] == self.dummy_scriptsig:
-                self.checkd_data_sig(sig,preimage,pub)
+                self.checkd_data_sig(sig,preimage,self.public[0])
                 script = [
                     len(pub), pub,
                     len(sig), sig,
@@ -151,11 +153,12 @@ class LastWillContractManager:
         tx.raw = tx.serialize()
 
     def checkd_data_sig(self,sig,pre,pk):
-        sec, compressed = self.keypairs.get(pk)
+        sec, compressed = self.keypair.get(pk)
         pre_hash = Hash(pre)
         pkey = regenerate_key(sec)
         secexp = pkey.secret
         private_key = MySigningKey.from_secret_exponent(secexp, curve=ecdsa.SECP256k1)
         public_key = private_key.get_verifying_key()
-        assert public_key.verify_digest(sig, pre_hash, sigdecode=ecdsa.util.sigdecode_der)
+        print("Data signature ok:")
+        print(public_key.verify_digest(sig[:-1], pre_hash, sigdecode=ecdsa.util.sigdecode_der))
 

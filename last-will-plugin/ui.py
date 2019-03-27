@@ -183,6 +183,7 @@ class Create(QDialog, MessageBoxMixin):
         switch_to(Intro, self.main_window, self.plugin, self.wallet_name, None, None)
 
 
+
     def wait_for_coin(self, id, timeout):
         for j in range(timeout):
             coins = self.wallet.get_spendable_coins(None, self.config)
@@ -222,7 +223,7 @@ class Manage(QDialog, MessageBoxMixin):
             mode="cold"
             b = QPushButton(_("Spend"))
             b.clicked.connect(self.end)
-        elif self.manager.mode==2:
+        else:
             mode="inheritor"
             b = QPushButton(_("Inherit"))
             b.clicked.connect(self.end)
