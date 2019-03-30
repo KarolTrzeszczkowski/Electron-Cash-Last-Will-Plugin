@@ -215,6 +215,7 @@ class Manage(QDialog, MessageBoxMixin):
         vbox = QVBoxLayout()
         self.setLayout(vbox)
         self.fee=1000
+        print(self.manager.tx)
         if self.manager.mode==0:
             mode="refreshing"
             b = QPushButton(_("Refresh"))

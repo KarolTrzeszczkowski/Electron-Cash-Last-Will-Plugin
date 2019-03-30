@@ -18,8 +18,8 @@ class LastWillContract:
     from the hot wallet or spend from the cold wallet."""
 
     def __init__(self, addresses):
-        self.time1=7
-        self.time2=0
+
+        time = 60
         self.addresses=addresses
 
         self.redeemscript = joinbytes([
@@ -28,33 +28,34 @@ class LastWillContract:
             len(addresses[2].hash160), addresses[2].hash160,
             Op.OP_3, Op.OP_PICK, Op.OP_TRUE, Op.OP_EQUAL,
             Op.OP_IF,
-            Op.OP_6, Op.OP_PICK, Op.OP_HASH160, Op.OP_3, Op.OP_PICK, Op.OP_EQUALVERIFY, Op.OP_5, Op.OP_PICK, Op.OP_7,
-            Op.OP_PICK, Op.OP_CHECKSIGVERIFY, Op.OP_5, Op.OP_PICK, Op.OP_SIZE, Op.OP_1SUB, Op.OP_SPLIT, Op.OP_DROP,
-            Op.OP_5, Op.OP_PICK, Op.OP_SHA256, Op.OP_8, Op.OP_PICK, Op.OP_CHECKDATASIGVERIFY, 2, 232, 3, Op.OP_5,
-            Op.OP_PICK, Op.OP_4, Op.OP_SPLIT, Op.OP_SPLIT, Op.OP_DROP, Op.OP_6, Op.OP_PICK, Op.OP_DUP, Op.OP_SIZE,
-            Op.OP_NIP, 1, 40, Op.OP_SUB, Op.OP_SPLIT, Op.OP_SPLIT, Op.OP_NIP, Op.OP_DUP, 1, 32, Op.OP_SPLIT,
-            Op.OP_SPLIT, Op.OP_DROP, Op.OP_8, Op.OP_PICK, Op.OP_DUP, Op.OP_SIZE, Op.OP_NIP, 1, 44, Op.OP_SUB,
-            Op.OP_SPLIT, Op.OP_SPLIT, Op.OP_DROP, Op.OP_DUP, 1, 104, Op.OP_SPLIT, Op.OP_SPLIT, Op.OP_NIP, Op.OP_DUP,
-            Op.OP_OVER, Op.OP_SIZE, Op.OP_NIP, Op.OP_8, Op.OP_SUB, Op.OP_SPLIT, Op.OP_DUP, Op.OP_BIN2NUM, Op.OP_8,
-            Op.OP_PICK, Op.OP_SUB, Op.OP_8, Op.OP_NUM2BIN, Op.OP_2, Op.OP_PICK, Op.OP_3, Op.OP_SPLIT, Op.OP_9,
-            Op.OP_PICK, Op.OP_BIN2NUM, Op.OP_2, Op.OP_GREATERTHANOREQUAL, Op.OP_VERIFY, Op.OP_2, Op.OP_PICK, Op.OP_2,
-            Op.OP_PICK, Op.OP_CAT, Op.OP_OVER, Op.OP_HASH160, Op.OP_CAT, Op.OP_HASH256, Op.OP_8, Op.OP_PICK,
-            Op.OP_EQUAL, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-            Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-            Op.OP_NIP,
+                Op.OP_12, Op.OP_PICK, Op.OP_HASH160, Op.OP_3, Op.OP_PICK, Op.OP_EQUALVERIFY, Op.OP_11, Op.OP_PICK, Op.OP_13,
+                Op.OP_PICK, Op.OP_CHECKSIGVERIFY, Op.OP_10, Op.OP_PICK, Op.OP_10, Op.OP_PICK, Op.OP_CAT, Op.OP_9,
+                Op.OP_PICK, Op.OP_CAT, Op.OP_8, Op.OP_PICK, Op.OP_CAT, Op.OP_7, Op.OP_PICK, Op.OP_CAT, Op.OP_6, Op.OP_PICK,
+                Op.OP_CAT, Op.OP_5, Op.OP_PICK, Op.OP_CAT, Op.OP_12, Op.OP_PICK, Op.OP_SIZE, Op.OP_1SUB, Op.OP_SPLIT,
+                Op.OP_DROP, Op.OP_OVER, Op.OP_SHA256, Op.OP_15, Op.OP_PICK, Op.OP_CHECKDATASIGVERIFY, 2, 232, 3, Op.OP_9,
+                Op.OP_PICK, Op.OP_BIN2NUM, Op.OP_OVER, Op.OP_SUB, Op.OP_8, Op.OP_NUM2BIN, Op.OP_11, Op.OP_PICK, Op.OP_TRUE,
+                Op.OP_SPLIT, Op.OP_NIP, Op.OP_14, Op.OP_PICK, Op.OP_BIN2NUM, Op.OP_2, Op.OP_GREATERTHANOREQUAL,
+                Op.OP_VERIFY, 1, 135, 1, 169, 1, 20, 1, 23, Op.OP_5, Op.OP_PICK, Op.OP_OVER, Op.OP_CAT, Op.OP_3, Op.OP_PICK,
+                Op.OP_CAT, Op.OP_2, Op.OP_PICK, Op.OP_CAT, Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_CAT, Op.OP_4,
+                Op.OP_PICK, Op.OP_CAT, Op.OP_HASH256, Op.OP_14, Op.OP_PICK, Op.OP_EQUAL, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+                Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+                Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
             Op.OP_ELSE,
-            Op.OP_3, Op.OP_PICK, Op.OP_2, Op.OP_EQUAL,
-            Op.OP_IF,
-            Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_2, Op.OP_PICK, Op.OP_EQUALVERIFY, Op.OP_4, Op.OP_PICK, Op.OP_6,
-            Op.OP_PICK, Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-            Op.OP_ELSE,
-            Op.OP_3, Op.OP_PICK, Op.OP_3, Op.OP_EQUAL,
-            Op.OP_IF,
-            3, 7, 0, 64, Op.OP_CHECKSEQUENCEVERIFY, Op.OP_DROP, Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_OVER,
-            Op.OP_EQUALVERIFY, Op.OP_4, Op.OP_PICK, Op.OP_6, Op.OP_PICK, Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP,
-            Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-            Op.OP_ELSE,
-            Op.OP_FALSE, Op.OP_ENDIF, Op.OP_ENDIF, Op.OP_ENDIF
+                Op.OP_3, Op.OP_PICK, Op.OP_2, Op.OP_EQUAL,
+                Op.OP_IF,
+                    Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_2, Op.OP_PICK, Op.OP_EQUALVERIFY, Op.OP_4, Op.OP_PICK, Op.OP_6,
+                    Op.OP_PICK, Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+                Op.OP_ELSE,
+                    Op.OP_3, Op.OP_PICK, Op.OP_3, Op.OP_EQUAL,
+                    Op.OP_IF,
+                        3, 7, 0, 64, Op.OP_CHECKSEQUENCEVERIFY, Op.OP_DROP, Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_OVER,
+                        Op.OP_EQUALVERIFY, Op.OP_4, Op.OP_PICK, Op.OP_6, Op.OP_PICK, Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP,
+                        Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+                    Op.OP_ELSE,
+                        Op.OP_FALSE,
+                    Op.OP_ENDIF,
+                Op.OP_ENDIF,
+            Op.OP_ENDIF
 
         ])
 
@@ -100,9 +101,7 @@ class LastWillContractManager:
     def completetx(self, tx):
         """
         Completes transaction by creating scriptSig. You need to sign the
-        transaction before using this (see `signtx`). `secret` may be bytes
-        (if redeeming) or None (if refunding).
-
+        transaction before using this (see `signtx`).
         This works on multiple utxos if needed.
         """
         pub = bytes.fromhex(self.public[0])
@@ -141,10 +140,26 @@ class LastWillContractManager:
             print("Signature size:" + str(len(sig)))
             if txin['scriptSig'] == self.dummy_scriptsig:
                 self.checkd_data_sig(sig,preimage,self.public[0])
+
+                ver=preimage[:4]
+                hPhSo=preimage[4:104]
+                scriptCode=preimage[104:-52]
+                assert len(scriptCode)<256 and len(scriptCode)>75
+                value=preimage[-52:-44]
+                nSequence=preimage[-44:-40]
+                hashOutput=preimage[-40:-8]
+                tail=preimage[-8:]
+
                 script = [
                     len(pub), pub,
                     len(sig), sig,
-                    77, len(preimage).to_bytes(2, byteorder='little'), preimage,
+                    len(ver), ver,
+                    76, len(hPhSo), hPhSo,
+                    76, len(scriptCode), scriptCode,
+                    len(value), value,
+                    len(nSequence), nSequence,
+                    len(hashOutput), hashOutput,
+                    len(tail), tail,
                     Op.OP_1, 76, len(self.contract.redeemscript), self.contract.redeemscript,
                     ]
                 print("scriptSig length "+ str(joinbytes(script).hex().__sizeof__()))
