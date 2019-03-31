@@ -15,6 +15,7 @@ from electroncash_gui.qt.transaction_dialog import show_transaction
 from .contract_finder import find_contract
 from .last_will_contract import LastWillContractManager
 import time
+from math import ceil
 
 
 class Intro(QDialog, MessageBoxMixin):
@@ -38,7 +39,6 @@ class Intro(QDialog, MessageBoxMixin):
         b = QPushButton(_("Create new Last Will contract"))
         b.clicked.connect(lambda : switch_to(Create, self.main_window, self.plugin, self.wallet_name, None, self.manager))
         hbox.addWidget(b)
-
         b = QPushButton(_("Find existing Last Will"))
         b.clicked.connect(self.handle_finding)
         hbox.addWidget(b)
@@ -57,7 +57,11 @@ class Intro(QDialog, MessageBoxMixin):
                 if not self.password:
                     return
             i = self.wallet.get_address_index(self.contract.addresses[role])
-            priv = self.wallet.keystore.get_private_key(i, self.password)[0]
+            if not self.wallet.is_watching_only():
+                priv = self.wallet.keystore.get_private_key(i, self.password)[0]
+            else:
+                print("watch only")
+                priv = None
             public = self.wallet.get_public_keys(self.contract.addresses[role])
             self.manager = LastWillContractManager(self.contractTx, self.contract, public, priv, role)
             switch_to(Manage,self.main_window, self.plugin, self.wallet_name,self.password,self.manager)
@@ -215,20 +219,24 @@ class Manage(QDialog, MessageBoxMixin):
         vbox = QVBoxLayout()
         self.setLayout(vbox)
         self.fee=1000
-        print(self.manager.tx)
         if self.manager.mode==0:
-            mode="refreshing"
+            mode="refreshing wallet."
             b = QPushButton(_("Refresh"))
             b.clicked.connect(self.refresh)
         elif self.manager.mode==1:
-            mode="cold"
+            mode="cold wallet."
             b = QPushButton(_("Spend"))
             b.clicked.connect(self.end)
         else:
-            mode="inheritor"
+            mode="inheritor wallet."
             b = QPushButton(_("Inherit"))
             b.clicked.connect(self.end)
-        l = QLabel("<b>%s</b>" % (_("This is :" + mode)))
+        l = QLabel("<b>%s</b>" % (_("This is " + mode)))
+        vbox.addWidget(l)
+        l = QLabel(_("Value :" + str(self.manager.tx.get("value"))))
+        vbox.addWidget(l)
+        label = self.estimate_expiration()
+        l= QLabel(label)
         vbox.addWidget(l)
         vbox.addWidget(b)
 
@@ -242,8 +250,8 @@ class Manage(QDialog, MessageBoxMixin):
         tx = Transaction.from_io(inputs, outputs, locktime=0)
         tx.version = 2
         self.manager.signtx(tx)
-        self.manager.completetx_ref(tx)
         self.wallet.sign_transaction(tx, self.password)
+        self.manager.completetx_ref(tx)
         show_transaction(tx, self.main_window, "Refresh Last Will contract", prompt_if_unsaved=True)
         switch_to(Intro, self.main_window,self.plugin, self.wallet_name,None,None)
 
@@ -252,11 +260,28 @@ class Manage(QDialog, MessageBoxMixin):
         outputs = [(TYPE_ADDRESS, self.manager.contract.addresses[self.manager.mode], self.manager.value-self.fee)]
         tx = Transaction.from_io(inputs, outputs, locktime=0)
         tx.version = 2
-        self.manager.signtx(tx)
+        if not self.wallet.is_watching_only():
+            self.manager.signtx(tx)
+            self.wallet.sign_transaction(tx, self.password)
         self.manager.completetx(tx)
-        self.wallet.sign_transaction(tx, self.password)
         show_transaction(tx, self.main_window, "End Last Will contract", prompt_if_unsaved=True)
         switch_to(Intro, self.main_window,self.plugin, self.wallet_name,None,None)
+
+    def estimate_expiration(self):
+        """estimates age of the utxo in days. There are 144 blocks per day on average"""
+        tx_height = self.manager.tx.get("height")
+
+        current_height=self.main_window.network.get_local_height()
+        age = ceil((current_height-tx_height)/144)
+        print("Age: " +str(age) + " Height: "+str(tx_height))
+        if tx_height==0 :
+            label = _("Waiting for confirmation.")
+        elif (180-age) > 0:
+            label = _("Contract expires in:" +str(180-age) )
+        else :
+            label = _("Last Will is ready to be inherited.")
+        return label
+
 
 
 

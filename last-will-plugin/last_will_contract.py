@@ -19,7 +19,7 @@ class LastWillContract:
 
     def __init__(self, addresses):
 
-        time = 60
+        self.time1 = 7
         self.addresses=addresses
 
         self.redeemscript = joinbytes([
@@ -74,8 +74,8 @@ class LastWillContractManager:
         self.contract = contract
         self.dummy_scriptsig = '00'*(74 + len(self.contract.redeemscript))
         self.sequence=0
-        #if mode == 2:
-        #    self.sequence=2**22+self.contract.time1
+        if mode == 2:
+            self.sequence=2**22+self.contract.time1
         self.value=int(self.tx.get('value'))
 
         self.txin = dict(
@@ -104,6 +104,10 @@ class LastWillContractManager:
         transaction before using this (see `signtx`).
         This works on multiple utxos if needed.
         """
+        if self.mode == 1:
+            option = Op.OP_2
+        else :
+            option = Op.OP_3
         pub = bytes.fromhex(self.public[0])
         for txin in tx.inputs():
             # find matching inputs
@@ -117,7 +121,7 @@ class LastWillContractManager:
                 script = [
                     len(pub), pub,
                     len(sig), sig,
-                    Op.OP_2, 76, len(self.contract.redeemscript), self.contract.redeemscript,
+                    option, 76, len(self.contract.redeemscript), self.contract.redeemscript,
                     ]
                 print("scriptSig length " + str(joinbytes(script).hex().__sizeof__()))
             txin['scriptSig'] = joinbytes(script).hex()
