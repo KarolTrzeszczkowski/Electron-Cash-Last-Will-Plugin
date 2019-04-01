@@ -10,12 +10,13 @@ import electroncash.web as web
 from electroncash.i18n import _
 from electroncash_gui.qt.util import *
 from electroncash.wallet import Multisig_Wallet
-from electroncash.util import print_error, print_stderr, NotEnoughFunds
+from electroncash.util import NotEnoughFunds, to_bytes
 from electroncash_gui.qt.transaction_dialog import show_transaction
-from .contract_finder import find_contract
+from .contract_finder import find_contract, extract_contract_data
 from .last_will_contract import LastWillContractManager
-import time
+import time, json
 from math import ceil
+
 
 
 class Intro(QDialog, MessageBoxMixin):
@@ -32,6 +33,7 @@ class Intro(QDialog, MessageBoxMixin):
         self.contractTx=None
         self.manager=None
         self.password = None
+        self.role=0
         hbox = QHBoxLayout()
         l = QLabel("<b>%s</b>"%(_("Manage my Last Will:")))
         vbox.addWidget(l)
@@ -42,29 +44,55 @@ class Intro(QDialog, MessageBoxMixin):
         b = QPushButton(_("Find existing Last Will"))
         b.clicked.connect(self.handle_finding)
         hbox.addWidget(b)
+        b = QPushButton(_("Load contract info for offline wallet"))
+        b.clicked.connect(self.load)
+        vbox.addWidget(b)
         vbox.addStretch(1)
 
     def handle_finding(self):
         print(find_contract(self.wallet))
         try:
-            self.contractTx, self.contract, role = find_contract(self.wallet)[0] # grab first contract, multicontract support later
+            self.contractTx, self.contract, self.role = find_contract(self.wallet)[0] # grab first contract, multicontract support later
         except:
             print("No contract")
         else:
-            if self.wallet.has_password():
-                self.main_window.show_error(_("Last Will Contract found! Last Will plugin requires password. It will get access to your private keys."))
-                self.password = self.main_window.password_dialog()
-                if not self.password:
-                    return
-            i = self.wallet.get_address_index(self.contract.addresses[role])
-            if not self.wallet.is_watching_only():
-                priv = self.wallet.keystore.get_private_key(i, self.password)[0]
-            else:
-                print("watch only")
-                priv = None
-            public = self.wallet.get_public_keys(self.contract.addresses[role])
-            self.manager = LastWillContractManager(self.contractTx, self.contract, public, priv, role)
-            switch_to(Manage,self.main_window, self.plugin, self.wallet_name,self.password,self.manager)
+            self.start_manager()
+
+    def load(self):
+        fileName = self.main_window.getOpenFileName("Load Last Will Contract Info", "*.json")
+        try:
+            with open(fileName, "r") as f:
+                file_content = f.read()
+        except:
+            return
+        data = json.loads(file_content)
+        try:
+            self.contract = extract_contract_data(data.get("initial_tx"))
+            self.contractTx = [data.get("utxo")]
+            self.role = data.get('role')
+            # assert role == 1
+        except:
+            print("No contract or wrong wallet")
+            return
+        else:
+            self.start_manager()
+
+    def start_manager(self):
+        if self.wallet.has_password():
+            self.main_window.show_error(_(
+                "Last Will Contract found! Last Will plugin requires password. It will get access to your private keys."))
+            self.password = self.main_window.password_dialog()
+            if not self.password:
+                return
+        i = self.wallet.get_address_index(self.contract.addresses[self.role])
+        if not self.wallet.is_watching_only():
+            priv = self.wallet.keystore.get_private_key(i, self.password)[0]
+        else:
+            print("watch only")
+            priv = None
+        public = self.wallet.get_public_keys(self.contract.addresses[self.role])
+        self.manager = LastWillContractManager(self.contractTx, self.contract, public, priv, self.role)
+        switch_to(Manage, self.main_window, self.plugin, self.wallet_name, self.password, self.manager)
 
 
 
@@ -219,26 +247,53 @@ class Manage(QDialog, MessageBoxMixin):
         vbox = QVBoxLayout()
         self.setLayout(vbox)
         self.fee=1000
-        if self.manager.mode==0:
-            mode="refreshing wallet."
-            b = QPushButton(_("Refresh"))
-            b.clicked.connect(self.refresh)
-        elif self.manager.mode==1:
-            mode="cold wallet."
-            b = QPushButton(_("Spend"))
-            b.clicked.connect(self.end)
-        else:
-            mode="inheritor wallet."
-            b = QPushButton(_("Inherit"))
-            b.clicked.connect(self.end)
-        l = QLabel("<b>%s</b>" % (_("This is " + mode)))
-        vbox.addWidget(l)
+
+        self.mode_label = QLabel()
+        vbox.addWidget(self.mode_label)
         l = QLabel(_("Value :" + str(self.manager.tx.get("value"))))
         vbox.addWidget(l)
         label = self.estimate_expiration()
         l= QLabel(label)
         vbox.addWidget(l)
-        vbox.addWidget(b)
+        if self.manager.mode==0:
+            self.mode_label.setText(_("<b>%s</b>" % (_("This is refreshing wallet."))))
+            b = QPushButton(_("Refresh"))
+            b.clicked.connect(self.refresh)
+            vbox.addWidget(b)
+        elif self.manager.mode==1:
+            self.mode_label.setText(_("<b>%s</b>" % (_("This is cold wallet."))))
+            b = QPushButton(_("Export contract info"))
+            b.clicked.connect(self.export)
+            vbox.addWidget(b)
+            b = QPushButton(_("End contract"))
+            b.clicked.connect(self.end)
+            vbox.addWidget(b)
+        else:
+            self.mode_label.setText(_("<b>%s</b>" % (_("This is inheritors wallet."))))
+            b = QPushButton(_("Inherit"))
+            b.clicked.connect(self.inherit)
+            vbox.addWidget(b)
+
+    def export(self):
+        name = "Last_Will_Contract_Info_"+ time.strftime("%b%d%Y",time.localtime(time.time())) +".json"
+        fileName = self.main_window.getSaveFileName(_("Select where to save your contract info"), name, "*.txn")
+        t = find_contract(self.wallet, 'local')[0]
+        mycontract = {'utxo' : self.manager.tx, 'initial_tx' : t, 'role':self.manager.mode}
+        if fileName:
+            with open(fileName, "w+") as f:
+                j = json.dumps(mycontract, indent=4)
+                f.write(j)
+            self.show_message(_("Contract info saved successfully."))
+
+    def end(self):
+        inputs = [self.manager.txin]
+        outputs = [(TYPE_ADDRESS, self.manager.contract.addresses[self.manager.mode], self.manager.value - self.fee)]
+        tx = Transaction.from_io(inputs, outputs, locktime=0)
+        tx.version=2
+        if not self.wallet.is_watching_only():
+            self.manager.signtx(tx)
+            self.manager.completetx(tx)
+        show_transaction(tx, self.main_window, "End Last Will contract", prompt_if_unsaved=True)
 
     def refresh(self):
         if self.manager.mode!=0:
@@ -255,26 +310,25 @@ class Manage(QDialog, MessageBoxMixin):
         show_transaction(tx, self.main_window, "Refresh Last Will contract", prompt_if_unsaved=True)
         switch_to(Intro, self.main_window,self.plugin, self.wallet_name,None,None)
 
-    def end(self):
+    def inherit(self):
         inputs = [self.manager.txin]
         outputs = [(TYPE_ADDRESS, self.manager.contract.addresses[self.manager.mode], self.manager.value-self.fee)]
         tx = Transaction.from_io(inputs, outputs, locktime=0)
         tx.version = 2
-        if not self.wallet.is_watching_only():
-            self.manager.signtx(tx)
-            self.wallet.sign_transaction(tx, self.password)
+        #self.manager.signtx(tx)
+        self.wallet.sign_transaction(tx, self.password)
         self.manager.completetx(tx)
         show_transaction(tx, self.main_window, "End Last Will contract", prompt_if_unsaved=True)
         switch_to(Intro, self.main_window,self.plugin, self.wallet_name,None,None)
 
     def estimate_expiration(self):
         """estimates age of the utxo in days. There are 144 blocks per day on average"""
-        tx_height = self.manager.tx.get("height")
+        txHeight = self.manager.tx.get("height")
 
-        current_height=self.main_window.network.get_local_height()
-        age = ceil((current_height-tx_height)/144)
-        print("Age: " +str(age) + " Height: "+str(tx_height))
-        if tx_height==0 :
+        currentHeight=self.main_window.network.get_local_height()
+        age = ceil((currentHeight-txHeight)/144)
+        print("Age: " +str(age) + " Height: "+str(txHeight))
+        if txHeight==0 :
             label = _("Waiting for confirmation.")
         elif (180-age) > 0:
             label = _("Contract expires in:" +str(180-age) )

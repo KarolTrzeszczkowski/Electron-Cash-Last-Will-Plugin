@@ -1,10 +1,8 @@
-from ecdsa.ecdsa import curve_secp256k1, generator_secp256k1
 from electroncash.bitcoin import regenerate_key, MySigningKey, Hash
-from electroncash.address import Address, Script, hash160, ScriptOutput, OpCodes
-from electroncash.address import OpCodes as Op
+from electroncash.address import Address, OpCodes as Op
 import ecdsa
-from electroncash.util import bh2u
-import hashlib
+from electroncash.plugins import hook
+
 import time
 LOCKTIME_THRESHOLD = 500000000
 
@@ -93,10 +91,16 @@ class LastWillContractManager:
             )
 
 
+    @hook
+    def sign_tx(self, tx):
+        """generic tx signer for compressed pubkey"""
+        tx.sign(self.keypair)
+        self.completetx(tx)
 
     def signtx(self, tx):
         """generic tx signer for compressed pubkey"""
         tx.sign(self.keypair)
+
 
     def completetx(self, tx):
         """

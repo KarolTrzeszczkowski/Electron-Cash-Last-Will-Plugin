@@ -1,9 +1,10 @@
 from .last_will_contract import LastWillContract
 from electroncash.address import Address, ScriptOutput
 from itertools import permutations
+from electroncash.transaction import Transaction
 
 
-def find_contract(wallet):
+def find_contract(wallet,a = 'network'):
     """Searching transactions for the one maching contract
     by creating contracts from outputs"""
     contracts=[]
@@ -16,12 +17,24 @@ def find_contract(wallet):
             for c in candidates:
                 will = LastWillContract(c)
                 if will.address.to_ui_string()==address:
-                    response = wallet.network.synchronous_get(
-                        ("blockchain.scripthash.listunspent", [will.address.to_scripthash_hex()]))
-                    if unfunded_contract(response) : #skip unfunded and ended contracts
-                        continue
-                    contracts.append(( response, will, find_my_role(c, wallet)))
+                        response = wallet.network.synchronous_get(
+                            ("blockchain.scripthash.listunspent", [will.address.to_scripthash_hex()]))
+                        if unfunded_contract(response) : #skip unfunded and ended contracts
+                            continue
+                        if a == 'network':
+                            contracts.append(( response, will, find_my_role(c, wallet)))
+                        else:
+                            contracts.append(t.as_dict())
     return contracts
+
+def extract_contract_data(tx):
+    transaction=Transaction(tx)
+    address = get_contract_address(transaction.outputs())
+    candidates = get_candidates(transaction.outputs())
+    for c in candidates:
+        will = LastWillContract(c)
+        if will.address.to_ui_string()==address:
+            return will
 
 def unfunded_contract(r):
     """Checks if the contract is funded"""
