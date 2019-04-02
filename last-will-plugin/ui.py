@@ -14,12 +14,14 @@ from electroncash.util import NotEnoughFunds, to_bytes
 from electroncash_gui.qt.transaction_dialog import show_transaction
 from .contract_finder import find_contract, extract_contract_data
 from .last_will_contract import LastWillContractManager
+from .notification_service import NotificationWidget
 import time, json
 from math import ceil
 
 
 
 class Intro(QDialog, MessageBoxMixin):
+
     def __init__(self, parent, plugin, wallet_name, password, manager=None):
         QDialog.__init__(self, parent)
         self.main_window = parent
@@ -41,12 +43,12 @@ class Intro(QDialog, MessageBoxMixin):
         b = QPushButton(_("Create new Last Will contract"))
         b.clicked.connect(lambda : switch_to(Create, self.main_window, self.plugin, self.wallet_name, None, self.manager))
         hbox.addWidget(b)
-        b = QPushButton(_("Find existing Last Will"))
+        b = QPushButton(_("Find existing Last Will contract"))
         b.clicked.connect(self.handle_finding)
         hbox.addWidget(b)
-        b = QPushButton(_("Load contract info for offline wallet"))
+        b = QPushButton(_("Load Last Will contract info"))
         b.clicked.connect(self.load)
-        vbox.addWidget(b)
+        hbox.addWidget(b)
         vbox.addStretch(1)
 
     def handle_finding(self):
@@ -90,7 +92,10 @@ class Intro(QDialog, MessageBoxMixin):
         else:
             print("watch only")
             priv = None
-        public = self.wallet.get_public_keys(self.contract.addresses[self.role])
+        try:
+            public = self.wallet.get_public_keys(self.contract.addresses[self.role])
+        except:
+            self.show_error("Wrong wallet.")
         self.manager = LastWillContractManager(self.contractTx, self.contract, public, priv, self.role)
         switch_to(Manage, self.main_window, self.plugin, self.wallet_name, self.password, self.manager)
 
@@ -100,8 +105,6 @@ class Intro(QDialog, MessageBoxMixin):
 
 
 class Create(QDialog, MessageBoxMixin):
-    search_done_signal = pyqtSignal(object)
-
 
     def __init__(self, parent, plugin, wallet_name, password, manager):
         QDialog.__init__(self, parent)
@@ -230,9 +233,6 @@ class Create(QDialog, MessageBoxMixin):
 
 
 class Manage(QDialog, MessageBoxMixin):
-    search_done_signal = pyqtSignal(object)
-
-
     def __init__(self, parent, plugin, wallet_name, password, manager):
         QDialog.__init__(self, parent)
 
@@ -259,6 +259,20 @@ class Manage(QDialog, MessageBoxMixin):
             self.mode_label.setText(_("<b>%s</b>" % (_("This is refreshing wallet."))))
             b = QPushButton(_("Refresh"))
             b.clicked.connect(self.refresh)
+            self.notification = NotificationWidget(self)
+            vbox.addWidget(self.notification)
+            # l = QLabel("<b> %s </b>" % _("Licho Notification Service"))
+            # vbox.addWidget(l)
+            # self.nottify_me = QCheckBox(_("Remind me about the next refreshing one week before the contract expiry date (1 mBCH) (Coming soon)"))
+            # self.my_email = QLineEdit()
+            # self.my_email.setPlaceholderText("My e-mail")
+            # self.nottify_inheritor = QCheckBox(_("Inform my inheritor about the will when I die (10 mBCH) (Coming soon)"))
+            # self.i_email = QLineEdit()
+            # self.i_email.setPlaceholderText("Inheritors e-mail")
+            # notification_service = [self.nottify_me, self.my_email, self.nottify_inheritor, self.i_email]
+            # [vbox.addWidget(w) for w in notification_service]
+            #[w.setDisabled(True) for w in notification_service]
+            vbox.addStretch(1)
             vbox.addWidget(b)
         elif self.manager.mode==1:
             self.mode_label.setText(_("<b>%s</b>" % (_("This is cold wallet."))))
@@ -274,16 +288,7 @@ class Manage(QDialog, MessageBoxMixin):
             b.clicked.connect(self.inherit)
             vbox.addWidget(b)
 
-    def export(self):
-        name = "Last_Will_Contract_Info_"+ time.strftime("%b%d%Y",time.localtime(time.time())) +".json"
-        fileName = self.main_window.getSaveFileName(_("Select where to save your contract info"), name, "*.txn")
-        t = find_contract(self.wallet, 'local')[0]
-        mycontract = {'utxo' : self.manager.tx, 'initial_tx' : t, 'role':self.manager.mode}
-        if fileName:
-            with open(fileName, "w+") as f:
-                j = json.dumps(mycontract, indent=4)
-                f.write(j)
-            self.show_message(_("Contract info saved successfully."))
+
 
     def end(self):
         inputs = [self.manager.txin]
@@ -294,6 +299,7 @@ class Manage(QDialog, MessageBoxMixin):
             self.manager.signtx(tx)
             self.manager.completetx(tx)
         show_transaction(tx, self.main_window, "End Last Will contract", prompt_if_unsaved=True)
+        switch_to(Intro, self.main_window, self.plugin, self.wallet_name, None, None)
 
     def refresh(self):
         if self.manager.mode!=0:
@@ -335,6 +341,17 @@ class Manage(QDialog, MessageBoxMixin):
         else :
             label = _("Last Will is ready to be inherited.")
         return label
+
+    def export(self):
+        name = "Last_Will_Contract_Info_"+ time.strftime("%b%d%Y",time.localtime(time.time())) +".json"
+        fileName = self.main_window.getSaveFileName(_("Select where to save your contract info"), name, "*.txn")
+        t = find_contract(self.wallet, 'local')[0]
+        mycontract = {'utxo' : self.manager.tx, 'initial_tx' : t, 'role':self.manager.mode}
+        if fileName:
+            with open(fileName, "w+") as f:
+                j = json.dumps(mycontract, indent=4)
+                f.write(j)
+            self.show_message(_("Contract info saved successfully."))
 
 
 
