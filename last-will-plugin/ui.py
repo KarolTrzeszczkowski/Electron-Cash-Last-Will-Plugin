@@ -1,20 +1,22 @@
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
+
 import webbrowser
 from .last_will_contract import LastWillContract
-from electroncash.address import Address, Script, hash160, ScriptOutput, OpCodes
+from electroncash.address import ScriptOutput
 from electroncash.transaction import Transaction,TYPE_ADDRESS, TYPE_SCRIPT
 import electroncash.web as web
 
 from electroncash.i18n import _
 from electroncash_gui.qt.util import *
 from electroncash.wallet import Multisig_Wallet
-from electroncash.util import NotEnoughFunds, to_bytes
+from electroncash.util import NotEnoughFunds
 from electroncash_gui.qt.transaction_dialog import show_transaction
 from .contract_finder import find_contract, extract_contract_data
 from .last_will_contract import LastWillContractManager
 from .notification_service import NotificationWidget
+from .bch_message import make_opreturn
 import time, json
 from math import ceil
 
@@ -37,6 +39,7 @@ class Intro(QDialog, MessageBoxMixin):
         self.password = None
         self.role=0
         hbox = QHBoxLayout()
+
         l = QLabel("<b>%s</b>"%(_("Manage my Last Will:")))
         vbox.addWidget(l)
         vbox.addLayout(hbox)
@@ -139,7 +142,6 @@ class Create(QDialog, MessageBoxMixin):
         l = QLabel("<b>%s</b>" % (_("Creatin Last Will contract:")))
         vbox.addWidget(l)
         l = QLabel(_("Refreshing address") + ": auto (this wallet)") #self.refreshing_address.to_ui_string())
-        l.setTextInteractionFlags(Qt.TextSelectableByMouse)
         vbox.addWidget(l)
 
         grid = QGridLayout()
@@ -167,6 +169,8 @@ class Create(QDialog, MessageBoxMixin):
         grid.addWidget(self.cold_address_wid, 3, 0)
         b = QPushButton(_("Create Last Will"))
         b.clicked.connect(lambda: self.create_last_will())
+        self.notification = NotificationWidget(self)
+        vbox.addWidget(self.notification)
         vbox.addStretch(1)
         vbox.addWidget(b)
         self.create_button = b
@@ -215,11 +219,17 @@ class Create(QDialog, MessageBoxMixin):
         tx = Transaction.from_io(inputs, outputs, locktime=0)
         tx.version=2
         show_transaction(tx, self.main_window, "Make Last Will contract", prompt_if_unsaved=True)
+
+        if self.notification.do_anything :
+            outputs = self.notification.notification_outputs(self.contract.address)
+            tx = self.wallet.mktx(outputs, self.password, self.config,
+                              domain=self.fund_domain, change_addr=self.fund_change_address)
+            show_transaction(tx, self.main_window, "Notification service payment", prompt_if_unsaved=True)
+
         switch_to(Intro, self.main_window, self.plugin, self.wallet_name, None, None)
 
 
-
-    def wait_for_coin(self, id, timeout):
+def wait_for_coin(self, id, timeout):
         for j in range(timeout):
             coins = self.wallet.get_spendable_coins(None, self.config)
             for c in coins:
@@ -261,17 +271,6 @@ class Manage(QDialog, MessageBoxMixin):
             b.clicked.connect(self.refresh)
             self.notification = NotificationWidget(self)
             vbox.addWidget(self.notification)
-            # l = QLabel("<b> %s </b>" % _("Licho Notification Service"))
-            # vbox.addWidget(l)
-            # self.nottify_me = QCheckBox(_("Remind me about the next refreshing one week before the contract expiry date (1 mBCH) (Coming soon)"))
-            # self.my_email = QLineEdit()
-            # self.my_email.setPlaceholderText("My e-mail")
-            # self.nottify_inheritor = QCheckBox(_("Inform my inheritor about the will when I die (10 mBCH) (Coming soon)"))
-            # self.i_email = QLineEdit()
-            # self.i_email.setPlaceholderText("Inheritors e-mail")
-            # notification_service = [self.nottify_me, self.my_email, self.nottify_inheritor, self.i_email]
-            # [vbox.addWidget(w) for w in notification_service]
-            #[w.setDisabled(True) for w in notification_service]
             vbox.addStretch(1)
             vbox.addWidget(b)
         elif self.manager.mode==1:
@@ -285,7 +284,7 @@ class Manage(QDialog, MessageBoxMixin):
         else:
             self.mode_label.setText(_("<b>%s</b>" % (_("This is inheritors wallet."))))
             b = QPushButton(_("Inherit"))
-            b.clicked.connect(self.inherit)
+            b.clicked.connect(self.end)
             vbox.addWidget(b)
 
 
@@ -304,7 +303,13 @@ class Manage(QDialog, MessageBoxMixin):
     def refresh(self):
         if self.manager.mode!=0:
             print("This wallet can't refresh a contract!")
-            return 0
+            return
+        print("Notification Service: ")
+        print(self.notification.do_anything())
+        if self.notification.do_anything() :
+            outputs = self.notification.notification_outputs(self.manager.contract.address)
+            tx = self.wallet.mktx(outputs, self.password, self.config, None, None)
+            show_transaction(tx, self.main_window, "Notification service payment", prompt_if_unsaved=True)
 
         inputs = [self.manager.txin]
         outputs = [(TYPE_ADDRESS, self.manager.contract.address, self.manager.value-self.fee)]
@@ -314,18 +319,10 @@ class Manage(QDialog, MessageBoxMixin):
         self.wallet.sign_transaction(tx, self.password)
         self.manager.completetx_ref(tx)
         show_transaction(tx, self.main_window, "Refresh Last Will contract", prompt_if_unsaved=True)
+
+
         switch_to(Intro, self.main_window,self.plugin, self.wallet_name,None,None)
 
-    def inherit(self):
-        inputs = [self.manager.txin]
-        outputs = [(TYPE_ADDRESS, self.manager.contract.addresses[self.manager.mode], self.manager.value-self.fee)]
-        tx = Transaction.from_io(inputs, outputs, locktime=0)
-        tx.version = 2
-        #self.manager.signtx(tx)
-        self.wallet.sign_transaction(tx, self.password)
-        self.manager.completetx(tx)
-        show_transaction(tx, self.main_window, "End Last Will contract", prompt_if_unsaved=True)
-        switch_to(Intro, self.main_window,self.plugin, self.wallet_name,None,None)
 
     def estimate_expiration(self):
         """estimates age of the utxo in days. There are 144 blocks per day on average"""
@@ -356,6 +353,8 @@ class Manage(QDialog, MessageBoxMixin):
 
 
 
+
+
 def switch_to(mode, main_window, plugin, wallet_name,password,manager):
     l = mode(main_window, plugin, wallet_name, password=password, manager=manager)
     tab = main_window.create_list_tab(l)
@@ -367,12 +366,5 @@ def switch_to(mode, main_window, plugin, wallet_name,password,manager):
     main_window.tabs.removeTab(i)
 
 
-def make_opreturn(data):
-    """Turn data bytes into a single-push opreturn script"""
-    if len(data) < 76:
-        return bytes((OpCodes.OP_RETURN, len(data))) + data
-    elif len(data) < 256:
-        return bytes((OpCodes.OP_RETURN, 76, len(data))) + data
-    else:
-        raise ValueError(data)
+
 
