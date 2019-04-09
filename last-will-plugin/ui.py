@@ -16,7 +16,7 @@ from electroncash_gui.qt.transaction_dialog import show_transaction
 from .contract_finder import find_contract, extract_contract_data
 from .last_will_contract import LastWillContractManager
 from .notification_service import NotificationWidget
-from .bch_message import make_opreturn
+from .util import *
 import time, json
 from math import ceil
 
@@ -39,7 +39,10 @@ class Intro(QDialog, MessageBoxMixin):
         self.password = None
         self.role=0
         hbox = QHBoxLayout()
-
+        if is_expired():
+            l = QLabel(_("Please update your plugin"))
+            l.setStyleSheet("QLabel {color:#ff0000}")
+            vbox.addWidget(l)
         l = QLabel("<b>%s</b>"%(_("Manage my Last Will:")))
         vbox.addWidget(l)
         vbox.addLayout(hbox)
@@ -75,7 +78,7 @@ class Intro(QDialog, MessageBoxMixin):
             self.contract = extract_contract_data(data.get("initial_tx"))
             self.contractTx = [data.get("utxo")]
             self.role = data.get('role')
-            # assert role == 1
+            assert role == 1
         except:
             print("No contract or wrong wallet")
             return
@@ -265,7 +268,11 @@ class Manage(QDialog, MessageBoxMixin):
         label = self.estimate_expiration()
         l= QLabel(label)
         vbox.addWidget(l)
+
         if self.manager.mode==0:
+            label = self.refresh_lock()
+            l = QLabel(label)
+            vbox.addWidget(l)
             self.mode_label.setText(_("<b>%s</b>" % (_("This is refreshing wallet."))))
             b = QPushButton(_("Refresh"))
             b.clicked.connect(self.refresh)
@@ -323,18 +330,34 @@ class Manage(QDialog, MessageBoxMixin):
 
         switch_to(Intro, self.main_window,self.plugin, self.wallet_name,None,None)
 
+    def get_age(self):
+        txHeight = self.manager.tx.get("height")
+        currentHeight=self.main_window.network.get_local_height()
+        age = ceil((currentHeight-txHeight)/144)
+        return age
+
+    def refresh_lock(self):
+        """Contract can be refreshed only when it's one week old"""
+        txHeight = self.manager.tx.get("height")
+        age = self.get_age()
+        print("Age: " +str(age) + " Height: "+str(txHeight))
+        if txHeight==0 :
+            label = _("Refresh lock: " + str(7) + " days")
+        elif (7-age) > 0:
+            label = _("Refresh lock:" + str(8-age) + " days" )
+        else :
+            label = _("You can refresh your contract.")
+        return label
 
     def estimate_expiration(self):
         """estimates age of the utxo in days. There are 144 blocks per day on average"""
         txHeight = self.manager.tx.get("height")
-
-        currentHeight=self.main_window.network.get_local_height()
-        age = ceil((currentHeight-txHeight)/144)
+        age = self.get_age()
         print("Age: " +str(age) + " Height: "+str(txHeight))
         if txHeight==0 :
             label = _("Waiting for confirmation.")
         elif (180-age) > 0:
-            label = _("Contract expires in:" +str(180-age) )
+            label = _("Contract expires in:" +str(180-age)+ " days"  )
         else :
             label = _("Last Will is ready to be inherited.")
         return label

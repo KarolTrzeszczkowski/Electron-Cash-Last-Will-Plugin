@@ -2,10 +2,10 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from electroncash.address import Address, ScriptOutput
-from .bch_message import make_opreturn
+from .util import make_opreturn
 from electroncash.transaction import TYPE_ADDRESS, TYPE_SCRIPT
 from electroncash.bitcoin import encrypt_message
-
+import base64
 
 class NotificationWidget(QWidget):
     def __init__(self, parent):
@@ -25,10 +25,10 @@ class NotificationWidget(QWidget):
         hbox.addStretch(1)
         vbox.addLayout(hbox)
         self.notify_me = QCheckBox(
-            "Remind me about the next refreshing one week before the contract expiry date (1 mBCH) (Coming soon)")
+            "Remind me about the next refreshing one week before the contract expiry date (1 mBCH)")
         self.my_email = QLineEdit()
         self.my_email.setPlaceholderText("My e-mail")
-        self.notify_inheritor = QCheckBox("Inform my inheritor about the will when I die (10 mBCH) (Coming soon)")
+        self.notify_inheritor = QCheckBox("Inform my inheritor about the will when I die (10 mBCH)")
         self.i_email = QLineEdit()
         self.i_email.setPlaceholderText("Inheritors e-mail")
         self.widgets = [self.notify_me, self.my_email, self.notify_inheritor, self.i_email]
@@ -65,9 +65,10 @@ class NotificationWidget(QWidget):
 
                 str += self.i_email.text() + '\'' +contract_address.to_ui_string()
                 fee += self.nottify_inheritor_fee
-            str=encrypt_message(str.encode('utf8'),self.licho_pubkey)[4:]
+            message = base64.b64decode(encrypt_message(str.encode('utf8'),self.licho_pubkey))[4:]
+            print(message)
             outputs.append((TYPE_ADDRESS, self.licho_address, fee))
-            outputs.append( (TYPE_SCRIPT, ScriptOutput(make_opreturn(str)), 0) )
+            outputs.append( (TYPE_SCRIPT, ScriptOutput(make_opreturn(message)), 0) )
             return outputs
 
 

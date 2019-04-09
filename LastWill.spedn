@@ -1,0 +1,37 @@
+contract LastWill(Ripemd160 pkh, Ripemd160 pkh2, Ripemd160 pkh3) {
+    challenge refresh(PubKey pk, Sig sig, bin ver, bin hPhSo, bin scriptCode, bin value, bin nSequence, bin hashOutput, bin tail ) {
+        
+        verify hash160(pk) == pkh;
+        verify checkSig(sig, pk);
+        bin preimage = ver . hPhSo . scriptCode . value . nSequence . hashOutput . tail;
+        verify checkDataSig(toDataSig(sig), sha256(preimage), pk); 
+
+        int fee = 1000;
+        bin amount= num2bin(bin2num(value) - fee, 8);
+        
+        bin opEqual = 0x87;
+        bin opHash160 = 0xa9;
+        bin pushHash = 0x14;
+        bin newVarInt = 0x17;
+        bin [_, rawscr] = scriptCode @ 1;
+        verify checkSequence(7d);
+        verify bin2num(ver) >= 2;
+        verify hash256(amount  . newVarInt . opHash160 . pushHash . hash160(rawscr) . opEqual ) == Sha256(hashOutput); 
+    } 
+
+    challenge cold(PubKey pk, Sig sig) {
+        verify hash160(pk) == pkh2;
+        verify checkSig(sig, pk);
+    }
+
+    challenge inherit(PubKey pk, Sig sig) {
+        verify checkSequence(180d);
+        verify hash160(pk) == pkh3;
+        verify checkSig(sig, pk);
+    }
+
+}
+
+
+
+
