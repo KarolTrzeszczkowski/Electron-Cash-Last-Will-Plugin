@@ -6,6 +6,8 @@ from .util import make_opreturn
 from electroncash.transaction import TYPE_ADDRESS, TYPE_SCRIPT
 from electroncash.bitcoin import encrypt_message
 import base64
+import string
+import random
 
 class NotificationWidget(QWidget):
     def __init__(self, parent):
@@ -14,7 +16,7 @@ class NotificationWidget(QWidget):
         self.tab=parent
         self.nottify_me_fee = 100000
         self.nottify_inheritor_fee = 1000000
-        self.licho_pubkey = "033665931297a6094083d06a5f44b7f0266f275455492bda70bf872aa078f6add2"
+        self.licho_pubkey = "025721bdf418d241dc886faa79dfc3bac58092b1750b8253ad43d38feb00858b44"
         self.licho_address = Address.from_pubkey(self.licho_pubkey)
         hbox = QHBoxLayout()
         l = QLabel("<b> %s </b>" % "Licho Notification Service")
@@ -56,7 +58,7 @@ class NotificationWidget(QWidget):
         if self.enable_service.isChecked():
             outputs = []
             fee = 0
-            str = ''
+            str = random.choice(string.ascii_letters+ string.punctuation + string.digits)+'\'' # salt
             if self.notify_me.isChecked():
                 str += self.my_email.text()+'\''
                 fee += self.nottify_me_fee
