@@ -109,7 +109,11 @@ If you decide to order an e-mail notification, a transaction will be created. It
 ## License
 
 This software is distributed on GPL v3 license. The author encourage you to build your own smart contract plugins based on Last Will plugin code, implement desired functions and submit a pull request to this repository or fork this project and compete, if I fail to deliver what you expect. Just remember to publish your improvements on the same license.
+## Special thanks
 
+I want to thank **Mark Lundeberg** for solving the vast majority of my problems. I would never get this to work if he wasn't there to help me. I based on his work a lot. The Last Will plugin is a ship of theseus<sup>[3](https://en.wikipedia.org/wiki/Ship_of_Theseus)</sup> [coinsplitter](https://github.com/KarolTrzeszczkowski/Coinsplitter-Plugin) that I modified until it stopped to quack like a duck.<sup>[4](https://en.wikipedia.org/wiki/Duck_test)</sup>
+
+I also want to thank to **Pein_Sama** for help with spedn and the creation of the entire idea of looping transactions in his [famous article](https://honest.cash/pein_sama/spending-constraints-with-op_checkdatasig-172).
 ## Donations
 
 The best form of support is **using** this plugin and notification service. If you wish to support Licho the other way, consider donating to the following addresses:
