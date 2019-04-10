@@ -1,4 +1,5 @@
 # Last Will plugin for Electron Cash
+![logo](/licho_logo.png)
 ## Description
 Last Will plugin is made for creation and management of the Last Will smart contract directly from a desktop Electron Cash.
 
