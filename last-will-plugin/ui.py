@@ -161,7 +161,7 @@ class Create(QDialog, MessageBoxMixin):
         grid.addWidget(self.inheritor_address_wid, 1, 0)
 
         self.inheritance_value_wid = QLineEdit()
-        self.inheritance_value_wid.setMaximumWidth(70)
+        self.inheritance_value_wid.setMaximumWidth(100)
         self.inheritance_value_wid.setAlignment(Qt.AlignRight)
         self.inheritance_value_wid.textEdited.connect(self.inheritance_info_changed)
         grid.addWidget(self.inheritance_value_wid, 1, 1)
@@ -223,7 +223,7 @@ class Create(QDialog, MessageBoxMixin):
         tx.version=2
         show_transaction(tx, self.main_window, "Make Last Will contract", prompt_if_unsaved=True)
 
-        if self.notification.do_anything :
+        if self.notification.do_anything() :
             outputs = self.notification.notification_outputs(self.contract.address)
             tx = self.wallet.mktx(outputs, self.password, self.config,
                               domain=self.fund_domain, change_addr=self.fund_change_address)
