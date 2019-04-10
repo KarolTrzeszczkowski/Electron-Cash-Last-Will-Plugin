@@ -72,6 +72,10 @@ Smart contract is not a standard transaction. To see it with your wallet you nee
 
 Full code of the contract written with [spedn](https://spedn.readthedocs.io/en/latest/index.html) language can be found [here](LastWill.spedn)
 
+## Refresh lock
+
+There is a lock for refreshing, you can't do it for the first 7 days after creation or refreshing of the contract, so that no one, who have stolen your refreshing wallet can drain your funds to transaction fees by refreshing it a million times, over and over.
+
 ## Installing the plugin
 
 ## Creating a Last Will contract
