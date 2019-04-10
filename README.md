@@ -85,10 +85,10 @@ The plugin will appear as one of the tabs.
 
 ## Creating a Last Will contract
 In the plugin tab you will see three buttons.
-![intro](/pictures/into.png)
+![intro](/pictures/intro.png)
 Click *Create Last Will contract* to create a new contract.
 Fill the fields.
-![creating(/pictures/creating.png)
+![creating](/pictures/creating.png)
 
 ## Licho Notification Service
 
