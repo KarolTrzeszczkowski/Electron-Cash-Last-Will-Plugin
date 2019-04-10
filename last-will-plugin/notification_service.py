@@ -40,7 +40,7 @@ class NotificationWidget(QWidget):
         self.disabled=True
 
     def do_anything(self):
-        return self.enable_service.isChecked() and (self.notify_me.isChecked() or self.notify_inheritor.isChecked())
+        return (not self.disabled) and (self.notify_me.isChecked() or self.notify_inheritor.isChecked())
 
 
     def disable(self, bool):
@@ -55,7 +55,7 @@ class NotificationWidget(QWidget):
             self.disable(True)
 
     def notification_outputs(self,contract_address):
-        if self.enable_service.isChecked():
+        if not self.disabled:
             outputs = []
             fee = 0
             str = random.choice(string.ascii_letters+ string.punctuation + string.digits)+'\'' # salt

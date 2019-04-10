@@ -232,7 +232,7 @@ class Create(QDialog, MessageBoxMixin):
         switch_to(Intro, self.main_window, self.plugin, self.wallet_name, None, None)
 
 
-def wait_for_coin(self, id, timeout):
+    def wait_for_coin(self, id, timeout=10):
         for j in range(timeout):
             coins = self.wallet.get_spendable_coins(None, self.config)
             for c in coins:

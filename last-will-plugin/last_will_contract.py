@@ -2,6 +2,7 @@ from electroncash.bitcoin import regenerate_key, MySigningKey, Hash
 from electroncash.address import Address, OpCodes as Op
 import ecdsa
 from electroncash.plugins import hook
+from math import ceil
 
 import time
 LOCKTIME_THRESHOLD = 500000000
@@ -17,7 +18,10 @@ class LastWillContract:
 
     def __init__(self, addresses):
 
-        self.time1 = 7
+        self.time1 = (180*3600*24)//512
+        self.time_bytes = (self.time1).to_bytes(ceil((self.time1).bit_length()/8),'little')
+        self.time2= (7*3600*24)//512
+        self.time2_bytes = (self.time2).to_bytes(ceil((self.time2).bit_length()/8),'little')
         self.addresses=addresses
 
         self.redeemscript = joinbytes([
@@ -26,32 +30,35 @@ class LastWillContract:
             len(addresses[2].hash160), addresses[2].hash160,
             Op.OP_3, Op.OP_PICK, Op.OP_TRUE, Op.OP_EQUAL,
             Op.OP_IF,
-            Op.OP_12, Op.OP_PICK, Op.OP_HASH160, Op.OP_3, Op.OP_PICK, Op.OP_EQUALVERIFY, Op.OP_11, Op.OP_PICK, Op.OP_13,
-            Op.OP_PICK, Op.OP_CHECKSIGVERIFY, Op.OP_10, Op.OP_PICK, Op.OP_10, Op.OP_PICK, Op.OP_CAT, Op.OP_9,
-            Op.OP_PICK, Op.OP_CAT, Op.OP_8, Op.OP_PICK, Op.OP_CAT, Op.OP_7, Op.OP_PICK, Op.OP_CAT, Op.OP_6, Op.OP_PICK,
-            Op.OP_CAT, Op.OP_5, Op.OP_PICK, Op.OP_CAT, Op.OP_12, Op.OP_PICK, Op.OP_SIZE, Op.OP_1SUB, Op.OP_SPLIT,
-            Op.OP_DROP, Op.OP_OVER, Op.OP_SHA256, Op.OP_15, Op.OP_PICK, Op.OP_CHECKDATASIGVERIFY, 2, 232, 3, Op.OP_9,
-            Op.OP_PICK, Op.OP_BIN2NUM, Op.OP_OVER, Op.OP_SUB, Op.OP_8, Op.OP_NUM2BIN, 1, 135, 1, 169, 1, 20, 1, 23,
-            Op.OP_15, Op.OP_PICK, Op.OP_TRUE, Op.OP_SPLIT, Op.OP_NIP, 3, 157, 4, 64, Op.OP_CHECKSEQUENCEVERIFY,
-            Op.OP_DROP, 1, 18, Op.OP_PICK, Op.OP_BIN2NUM, Op.OP_2, Op.OP_GREATERTHANOREQUAL, Op.OP_VERIFY, Op.OP_5,
-            Op.OP_PICK, Op.OP_2, Op.OP_PICK, Op.OP_CAT, Op.OP_4, Op.OP_PICK, Op.OP_CAT, Op.OP_3, Op.OP_PICK, Op.OP_CAT,
-            Op.OP_OVER, Op.OP_HASH160, Op.OP_CAT, Op.OP_5, Op.OP_PICK, Op.OP_CAT, Op.OP_HASH256, Op.OP_14, Op.OP_PICK,
-            Op.OP_EQUAL, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-            Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-            Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+                Op.OP_12, Op.OP_PICK, Op.OP_HASH160, Op.OP_3, Op.OP_PICK, Op.OP_EQUALVERIFY, Op.OP_11, Op.OP_PICK, Op.OP_13,
+                Op.OP_PICK, Op.OP_CHECKSIGVERIFY, Op.OP_10, Op.OP_PICK, Op.OP_10, Op.OP_PICK, Op.OP_CAT, Op.OP_9,
+                Op.OP_PICK, Op.OP_CAT, Op.OP_8, Op.OP_PICK, Op.OP_CAT, Op.OP_7, Op.OP_PICK, Op.OP_CAT, Op.OP_6, Op.OP_PICK,
+                Op.OP_CAT, Op.OP_5, Op.OP_PICK, Op.OP_CAT, Op.OP_12, Op.OP_PICK, Op.OP_SIZE, Op.OP_1SUB, Op.OP_SPLIT,
+                Op.OP_DROP, Op.OP_OVER, Op.OP_SHA256, Op.OP_15, Op.OP_PICK, Op.OP_CHECKDATASIGVERIFY, 2, 232, 3, Op.OP_9,
+                Op.OP_PICK, Op.OP_BIN2NUM, Op.OP_OVER, Op.OP_SUB, Op.OP_8, Op.OP_NUM2BIN, 1, 135, 1, 169, 1, 20, 1, 23,
+                Op.OP_15, Op.OP_PICK, Op.OP_TRUE, Op.OP_SPLIT, Op.OP_NIP, 3, self.time2_bytes, 64, Op.OP_CHECKSEQUENCEVERIFY,
+                Op.OP_DROP, 1, 18, Op.OP_PICK, Op.OP_BIN2NUM, Op.OP_2, Op.OP_GREATERTHANOREQUAL, Op.OP_VERIFY, Op.OP_5,
+                Op.OP_PICK, Op.OP_2, Op.OP_PICK, Op.OP_CAT, Op.OP_4, Op.OP_PICK, Op.OP_CAT, Op.OP_3, Op.OP_PICK, Op.OP_CAT,
+                Op.OP_OVER, Op.OP_HASH160, Op.OP_CAT, Op.OP_5, Op.OP_PICK, Op.OP_CAT, Op.OP_HASH256, Op.OP_14, Op.OP_PICK,
+                Op.OP_EQUAL, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+                Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+                Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
             Op.OP_ELSE,
-            Op.OP_3, Op.OP_PICK, Op.OP_2, Op.OP_EQUAL,
-            Op.OP_IF,
-            Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_2, Op.OP_PICK, Op.OP_EQUALVERIFY, Op.OP_4, Op.OP_PICK, Op.OP_6,
-            Op.OP_PICK, Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-            Op.OP_ELSE,
-            Op.OP_3, Op.OP_PICK, Op.OP_3, Op.OP_EQUAL,
-            Op.OP_IF,
-            3, 167, 118, 64, Op.OP_CHECKSEQUENCEVERIFY, Op.OP_DROP, Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_OVER,
-            Op.OP_EQUALVERIFY, Op.OP_4, Op.OP_PICK, Op.OP_6, Op.OP_PICK, Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP,
-            Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
-            Op.OP_ELSE,
-            Op.OP_FALSE, Op.OP_ENDIF, Op.OP_ENDIF, Op.OP_ENDIF
+                Op.OP_3, Op.OP_PICK, Op.OP_2, Op.OP_EQUAL,
+                Op.OP_IF,
+                    Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_2, Op.OP_PICK, Op.OP_EQUALVERIFY, Op.OP_4, Op.OP_PICK, Op.OP_6,
+                    Op.OP_PICK, Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+                Op.OP_ELSE,
+                    Op.OP_3, Op.OP_PICK, Op.OP_3, Op.OP_EQUAL,
+                    Op.OP_IF,
+                        3, self.time_bytes, 64, Op.OP_CHECKSEQUENCEVERIFY, Op.OP_DROP, Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_OVER,
+                        Op.OP_EQUALVERIFY, Op.OP_4, Op.OP_PICK, Op.OP_6, Op.OP_PICK, Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP,
+                        Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
+                    Op.OP_ELSE,
+                        Op.OP_FALSE,
+                    Op.OP_ENDIF,
+                Op.OP_ENDIF,
+            Op.OP_ENDIF
 
         ])
 
@@ -69,9 +76,13 @@ class LastWillContractManager:
         self.keypair = {pub[0]: (priv, True)}
         self.contract = contract
         self.dummy_scriptsig = '00'*(74 + len(self.contract.redeemscript))
-        self.sequence=0
-        if mode == 2:
+
+        if mode == 0:
+            self.sequence=2**22+self.contract.time2
+        elif mode == 2:
             self.sequence=2**22+self.contract.time1
+        else:
+            self.sequence = 0
         self.value=int(self.tx.get('value'))
 
         self.txin = dict(

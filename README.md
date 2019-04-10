@@ -1,5 +1,5 @@
 # Last Will plugin for Electron Cash
-##Description
+## Description
 Last Will plugin is made for creation and management of the Last Will smart contract directly from a desktop Electron Cash.
 
 ### Features:
