@@ -77,7 +77,7 @@ Full code of the contract written with [spedn](https://spedn.readthedocs.io/en/l
 There is a lock for refreshing, you can't do it for the first 7 days after creation or refreshing of the contract, so that no one, who have stolen your refreshing wallet can drain your funds to transaction fees by refreshing it a million times, over and over.
 
 ## Installing the plugin
-Dirst, download and verify the last-will-plugin-vVERSION.zip file from [relesases](https://github.com/KarolTrzeszczkowski/Electron-Cash-Last-Will-Plugin/releases). Then go to your Electron Cash and install the plugin.
+First, download and verify the last-will-plugin-vVERSION.zip file from [relesases](https://github.com/KarolTrzeszczkowski/Electron-Cash-Last-Will-Plugin/releases). Then go to your Electron Cash and install the plugin.
 ![install](/pictures/installing.png)
 ![add](/pictures/add_plugin.png)
 The plugin will appear as one of the tabs.
