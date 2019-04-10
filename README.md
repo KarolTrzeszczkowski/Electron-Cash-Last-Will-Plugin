@@ -1,5 +1,5 @@
 # Last Will plugin for Electron Cash
-![logo](/licho_logo.png)
+![logo](/pictures/licho_logo.png)
 ## Description
 Last Will plugin is made for creation and management of the Last Will smart contract directly from a desktop Electron Cash.
 
@@ -77,9 +77,18 @@ Full code of the contract written with [spedn](https://spedn.readthedocs.io/en/l
 There is a lock for refreshing, you can't do it for the first 7 days after creation or refreshing of the contract, so that no one, who have stolen your refreshing wallet can drain your funds to transaction fees by refreshing it a million times, over and over.
 
 ## Installing the plugin
+Dirst, download and verify the last-will-plugin-vVERSION.zip file from [relesases](https://github.com/KarolTrzeszczkowski/Electron-Cash-Last-Will-Plugin/releases). Then go to your Electron Cash and install the plugin.
+![install](/pictures/installing.png)
+![add](/pictures/add_plugin.png)
+The plugin will appear as one of the tabs.
+
 
 ## Creating a Last Will contract
-
+In the plugin tab you will see three buttons.
+![intro](/pictures/into.png)
+Click *Create Last Will contract* to create a new contract.
+Fill the fields.
+![creating(/pictures/creating)
 
 ## Licho Notification Service
 
@@ -111,7 +120,7 @@ bitcoincash:qq93dq0j3uez8m995lrkx4a6n48j2fckfuwdaqeej2
 
 Legacy format: 121dPy31QTsxAYUyGRbwEmW2c1hyZy1Xnz
 
-![donate](/donate.png)
+![donate](/pictures/donate.png)
 
 
 
