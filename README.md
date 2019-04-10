@@ -7,9 +7,9 @@ Last Will plugin is made for creation and management of the Last Will smart cont
 
 * Made on **BCH** chain,
 * Security level of **cold storage**,
-* Non-custodial,
-* Permissionless,
-* Implements a [dead man's swich](https://en.wikipedia.org/wiki/Dead_man%27s_switch) with a **6 months will trigger**,
+* Noncustodial,
+* Permission-less,
+* Implements a [dead man's switch](https://en.wikipedia.org/wiki/Dead_man%27s_switch) with a **6 months will trigger**,
 * If you don't refresh your Last Will contract for 6 months, funds become available for your inheritor,
 * **One-click** refreshing from a **hot wallet**,
 * Refreshing wallet **can't access** your funds,
@@ -28,7 +28,7 @@ A contract consists of challenges, requirements that have to be met to access th
 
 ### The Last Will contract
 There are three challenges for the Last Will contract. 
-Pseudocode below shows the idead behind the smart contract:
+Pseudo-code below shows the idea behind the smart contract:
 ```
 contract LastWill()
 {
@@ -58,15 +58,15 @@ contract LastWill()
     }
 }
 ```
-*refreshing* challenge sends funds from the contract back to the contract, effectively **reseting the timer** that *inheritor* challenge measures.
+*refreshing* challenge sends funds from the contract back to the contract, effectively **resetting the timer** that *inheritor* challenge measures.
 
 *inheritor* challenge lets your inheritor collect the money from the contract when the money age reaches 6 months.
 
 *cold* challenge lets you spend your funds any time you like.
 
-Contract security model relies on the certainty that the refreshing wallet can do you no harm, even if it's private key is stolen. Refreshing the contract is relativery frequent activity therfore it should not bring any risk. Even if you find yourself on the run, and the only computer available in an old pc in an algierian library, you should be able to send your contract a message **"I'm still alive"** safely and irrepressibly, without any risk of losing funds due to that. 
+Contract security model relies on the certainty that the refreshing wallet can do you no harm, even if it's private key is stolen. Refreshing the contract is relatively frequent activity therefore it should not bring any risk. Even if you find yourself on the run, and the only computer available in an old pc in an algierian library, you should be able to send your contract a message **"I'm still alive"** safely and irrepressibly, without any risk of losing funds due to that. 
 
-If your refreshing wallet get stolen, the only thing that the attacker can do is to refresh your contract, reset your timer. You can then end the contract from your cold wallet and create another one, with the different refreshing wallet. If you die with your refreshing key stolen, funds are not strlen. Your inheritor might never get the inheritance. So the actual worse case scenario is an expected result of simply **not using** the Latst Will contract at all [(see Quadriga exchange story)](https://www.bbc.com/news/world-us-canada-47203706) or using the conventional, custodial and trusted last will and testament solutions.
+If your refreshing wallet get stolen, the only thing that the attacker can do is to refresh your contract, reset your timer. You can then end the contract from your cold wallet and create another one, with the different refreshing wallet. If you die with your refreshing key stolen, funds are not stolen. Your inheritor might never get the inheritance. So the actual worse case scenario is an expected result of simply **not using** the Last Will contract at all [(see Quadriga exchange story)](https://www.bbc.com/news/world-us-canada-47203706) or using the conventional, custodial and trusted last will and testament solutions.
 
 Smart contract is not a standard transaction. To see it with your wallet you need the plugin.
 
@@ -83,9 +83,9 @@ The creator of this software Karol Trzeszczkowski (Licho) provides an optional e
 
 6 months is quite a **long period of time**, it's possible to forget about refreshing your contract. To solve this problem Licho offers the **notification service**. For a small fee Licho will send you an **e-mail reminder** a week before your contract expiry date.
 
-The notification service is also a solution to the issue, that a wallet without the plugin installed can't see the contract. This means that your inheritor won't know about the contract unless they cheched. When you pass away and your contract expire, Licho may **let your inheritor know** about the Last Will contract waiting to be claimed.
+The notification service is also a solution to the issue, that a wallet without the plugin installed can't see the contract. This means that your inheritor won't know about the contract unless they checked. When you pass away and your contract expire, Licho may **let your inheritor know** about the Last Will contract waiting to be claimed.
 
-If you decide to order an e-mail notification, a transaction will be created. It will be of the value of the fee for the servises and it will have an encrypted email address attached as the OP_RETURN data. For the inheritor notification, an encrypted e-mail and the contract address will be attached. 
+If you decide to order an e-mail notification, a transaction will be created. It will be of the value of the fee for the services and it will have an encrypted email address attached as the OP_RETURN data. For the inheritor notification, an encrypted e-mail and the contract address will be attached. 
 
 ## Refreshing the contract
 
