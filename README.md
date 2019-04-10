@@ -34,26 +34,26 @@ contract LastWill()
 {
     challenge refresh()
     {
-        <b>verify</b> if the transaction 
+        verify if the transaction 
         was signed by the creators refreshing wallet
         
-        <b>verify</b> if the transaction 
+        verify if the transaction 
         send all funds from the contract address
         back to the same contract address
     }
     
     challenge cold()
     {
-        <b>verify</b> if the transaction 
+        verify if the transaction 
         was signed by the creators cold wallet
      }
      
     challenge inheritor()
     {
-        <b>verify</b> if the transaction 
+        verify if the transaction 
         was signed by the inheritors wallet
 
-        <b>verify</b> if 6 months have passed 
+        verify if 6 months have passed 
         since the funds were sent to the contract
     }
 }
