@@ -47,7 +47,7 @@ class Intro(QDialog, MessageBoxMixin):
         vbox.addWidget(l)
         vbox.addLayout(hbox)
         b = QPushButton(_("Create new Last Will contract"))
-        b.clicked.connect(lambda : switch_to(Create, self.main_window, self.plugin, self.wallet_name, None, self.manager))
+        b.clicked.connect(lambda : self.plugin.switch_to(Create, self.wallet_name, None, self.manager))
         hbox.addWidget(b)
         b = QPushButton(_("Find existing Last Will contract"))
         b.clicked.connect(self.handle_finding)
@@ -103,7 +103,7 @@ class Intro(QDialog, MessageBoxMixin):
         except:
             self.show_error("Wrong wallet.")
         self.manager = LastWillContractManager(self.contractTx, self.contract, public, priv, self.role)
-        switch_to(Manage, self.main_window, self.plugin, self.wallet_name, self.password, self.manager)
+        self.plugin.switch_to(Manage, self.wallet_name, self.password, self.manager)
 
 
 
@@ -229,7 +229,7 @@ class Create(QDialog, MessageBoxMixin):
                               domain=self.fund_domain, change_addr=self.fund_change_address)
             show_transaction(tx, self.main_window, "Notification service payment", prompt_if_unsaved=True)
 
-        switch_to(Intro, self.main_window, self.plugin, self.wallet_name, None, None)
+        self.plugin.switch_to(Intro, self.wallet_name, None, None)
 
 
     def wait_for_coin(self, id, timeout=10):
@@ -305,7 +305,7 @@ class Manage(QDialog, MessageBoxMixin):
             self.manager.signtx(tx)
             self.manager.completetx(tx)
         show_transaction(tx, self.main_window, "End Last Will contract", prompt_if_unsaved=True)
-        switch_to(Intro, self.main_window, self.plugin, self.wallet_name, None, None)
+        self.plugin.switch_to(Intro, self.wallet_name, None, None)
 
     def refresh(self):
         if self.manager.mode!=0:
@@ -327,8 +327,7 @@ class Manage(QDialog, MessageBoxMixin):
         self.manager.completetx_ref(tx)
         show_transaction(tx, self.main_window, "Refresh Last Will contract", prompt_if_unsaved=True)
 
-
-        switch_to(Intro, self.main_window,self.plugin, self.wallet_name,None,None)
+        self.plugin.switch_to(Intro, self.wallet_name,None,None)
 
     def get_age(self):
         txHeight = self.manager.tx.get("height")
@@ -374,19 +373,6 @@ class Manage(QDialog, MessageBoxMixin):
             self.show_message(_("Contract info saved successfully."))
 
 
-
-
-
-
-def switch_to(mode, main_window, plugin, wallet_name,password,manager):
-    l = mode(main_window, plugin, wallet_name, password=password, manager=manager)
-    tab = main_window.create_list_tab(l)
-    i = main_window.tabs.indexOf(plugin.lw_tabs.get(wallet_name, None))
-
-    plugin.lw_tabs[wallet_name] = tab
-    plugin.lw_tab[wallet_name] = l
-    main_window.tabs.addTab(tab, QIcon(":icons/preferences.png"), _('Last Will'))
-    main_window.tabs.removeTab(i)
 
 
 

@@ -19,10 +19,14 @@ class LastWillContract:
     def __init__(self, addresses):
 
         self.time1 = (180*3600*24)//512
-        self.time_bytes = (self.time1).to_bytes(ceil((self.time1).bit_length()/8),'little')
+        self.time_bytes = (self.time1).to_bytes(2,'little')
         self.time2= (7*3600*24)//512
-        self.time2_bytes = (self.time2).to_bytes(ceil((self.time2).bit_length()/8),'little')
+        self.time2_bytes = (self.time2).to_bytes(2,'little')
         self.addresses=addresses
+
+        assert len(self.time2_bytes)==2
+        assert len(self.time_bytes)==2
+
 
         self.redeemscript = joinbytes([
             len(addresses[0].hash160), addresses[0].hash160,
