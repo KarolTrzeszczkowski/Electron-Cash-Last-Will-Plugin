@@ -103,11 +103,14 @@ class Plugin(BasePlugin):
 
     def switch_to(self, mode, wallet_name, password, manager):
         window=self.wallet_windows[wallet_name]
-        l = mode(window, self, wallet_name, password=password, manager=manager)
-        tab = window.create_list_tab(l)
-        i = window.tabs.indexOf(self.lw_tabs.get(wallet_name, None))
+        try:
+            l = mode(window, self, wallet_name, password=password, manager=manager)
+            tab = window.create_list_tab(l)
+            i = window.tabs.indexOf(self.lw_tabs.get(wallet_name, None))
 
-        self.lw_tabs[wallet_name] = tab
-        self.lw_tab[wallet_name] = l
-        window.tabs.addTab(tab, QIcon(":icons/preferences.png"), _('Last Will'))
-        window.tabs.removeTab(i)
+            self.lw_tabs[wallet_name] = tab
+            self.lw_tab[wallet_name] = l
+            window.tabs.addTab(tab, QIcon(":icons/preferences.png"), _('Last Will'))
+            window.tabs.removeTab(i)
+        except:
+            return

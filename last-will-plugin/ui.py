@@ -125,7 +125,8 @@ class Create(QDialog, MessageBoxMixin):
             self.main_window.show_error(_("Last Will requires password. It will get access to your private keys."))
             self.password = parent.password_dialog()
             if not self.password:
-                return
+                print("no password")
+                self.plugin.switch_to(Intro, self.wallet_name,None, None)
         self.fund_domain = None
         self.fund_change_address = None
         self.refresh_address = self.wallet.get_unused_address()
