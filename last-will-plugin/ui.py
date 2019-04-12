@@ -7,7 +7,7 @@ from .last_will_contract import LastWillContract
 from electroncash.address import ScriptOutput
 from electroncash.transaction import Transaction,TYPE_ADDRESS, TYPE_SCRIPT
 import electroncash.web as web
-
+from electroncash_gui.qt.amountedit  import BTCAmountEdit
 from electroncash.i18n import _
 from electroncash_gui.qt.util import *
 from electroncash.wallet import Multisig_Wallet
@@ -100,10 +100,12 @@ class Intro(QDialog, MessageBoxMixin):
             priv = None
         try:
             public = self.wallet.get_public_keys(self.contract.addresses[self.role])
+            self.manager = LastWillContractManager(self.contractTx, self.contract, public, priv, self.role)
+            self.plugin.switch_to(Manage, self.wallet_name, self.password, self.manager)
         except:
             self.show_error("Wrong wallet.")
-        self.manager = LastWillContractManager(self.contractTx, self.contract, public, priv, self.role)
-        self.plugin.switch_to(Manage, self.wallet_name, self.password, self.manager)
+            self.plugin.switch_to(Intro,self.wallet_name,None,None)
+
 
 
 
@@ -154,16 +156,14 @@ class Create(QDialog, MessageBoxMixin):
         l = QLabel(_("Inheritor address: "))
         grid.addWidget(l, 0, 0)
 
-        l = QLabel(_("Value (sats)"))
+        l = QLabel(_("Value"))
         grid.addWidget(l, 0, 1)
 
         self.inheritor_address_wid = QLineEdit()
         self.inheritor_address_wid.textEdited.connect(self.inheritance_info_changed)
         grid.addWidget(self.inheritor_address_wid, 1, 0)
 
-        self.inheritance_value_wid = QLineEdit()
-        self.inheritance_value_wid.setMaximumWidth(100)
-        self.inheritance_value_wid.setAlignment(Qt.AlignRight)
+        self.inheritance_value_wid = BTCAmountEdit(self.main_window.get_decimal_point)
         self.inheritance_value_wid.textEdited.connect(self.inheritance_info_changed)
         grid.addWidget(self.inheritance_value_wid, 1, 1)
         l = QLabel(_("My cold wallet address: "))
@@ -187,7 +187,7 @@ class Create(QDialog, MessageBoxMixin):
         try:
             self.inheritor_address = Address.from_string(self.inheritor_address_wid.text())
             self.cold_address = Address.from_string(self.cold_address_wid.text())
-            self.value = int(self.inheritance_value_wid.text())
+            self.value = self.inheritance_value_wid.get_amount()
         except:
             self.create_button.setDisabled(True)
         else:

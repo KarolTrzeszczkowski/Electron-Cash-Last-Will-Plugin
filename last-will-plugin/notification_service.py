@@ -27,7 +27,7 @@ class NotificationWidget(QWidget):
         hbox.addStretch(1)
         vbox.addLayout(hbox)
         self.notify_me = QCheckBox(
-            "Remind me about the next refreshing one week before the contract expiry date (1 mBCH)")
+            "Remind me about the next refreshing one month before the contract expiry date (1 mBCH)")
         self.my_email = QLineEdit()
         self.my_email.setPlaceholderText("My e-mail")
         self.notify_inheritor = QCheckBox("Inform my inheritor about the will when I die (10 mBCH)")
