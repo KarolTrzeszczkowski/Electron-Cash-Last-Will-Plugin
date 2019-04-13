@@ -118,7 +118,7 @@ I also want to thank to **Pein_Sama** for help with spedn and the creation of th
 
 The best form of support is **using** this plugin and notification service. If you wish to support Licho the other way, consider donating to the following addresses:
 
-Cash Account: Karol#567890
+Cash Account: Licho#14431
 
 bitcoincash:qq93dq0j3uez8m995lrkx4a6n48j2fckfuwdaqeej2
 
