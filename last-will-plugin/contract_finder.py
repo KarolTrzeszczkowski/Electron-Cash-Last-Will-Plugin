@@ -17,14 +17,18 @@ def find_contract(wallet,a = 'network'):
             for c in candidates:
                 will = LastWillContract(c)
                 if will.address.to_ui_string()==address:
-                        response = wallet.network.synchronous_get(
-                            ("blockchain.scripthash.listunspent", [will.address.to_scripthash_hex()]))
-                        if unfunded_contract(response) : #skip unfunded and ended contracts
-                            continue
-                        if a == 'network':
-                            contracts.append(( response, will, find_my_role(c, wallet)))
-                        else:
-                            contracts.append(t.as_dict())
+                    refreshing=c[0]
+                    response = wallet.network.synchronous_get(
+                        ("blockchain.scripthash.listunspent", [will.address.to_scripthash_hex()]))
+                    if unfunded_contract(response) : #skip unfunded and ended contracts
+                        continue
+                    utxo=response[0][0]
+                    if len(response)>1:
+                        utxo= filter_trick_utxos(response[0],wallet,refreshing,will.address)
+                    if a == 'network':
+                        contracts.append(( utxo, will, find_my_role(c, wallet)))
+                    else:
+                        contracts.append(t.as_dict())
     return contracts
 
 def extract_contract_data(tx):
@@ -45,6 +49,15 @@ def unfunded_contract(r):
         if t.get('value') == 0: # when contract was drained by fees it's still in utxo
             s = True
     return s
+
+def filter_trick_utxos(r, wallet, ref, contract):
+    """Mallicious actor may try to trick a plugin by sending dust to the contract address"""
+    for utxo in r:
+        request = ('blockchain.transaction.get',[utxo.get('tx_hash')])
+        tx = Transaction(wallet.network.synchronous_get(request))
+        if tx.inputs().get('address') != ref or tx.inputs().get('address') != contract:
+            continue
+        return utxo
 
 
 def get_contract_address(outputs):
@@ -72,5 +85,5 @@ def find_my_role(candidates, wallet):
     2 if cold and 3 if it's inheritors wallet"""
     for counter, a in enumerate(candidates, start=0):
         if wallet.is_mine(a):
-            return counter
+            return counter, a
 
