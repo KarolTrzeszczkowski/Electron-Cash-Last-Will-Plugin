@@ -252,8 +252,9 @@ class UtxoList(MyTreeWidget, MessageBoxMixin):
     def __init__(self, parent, utxos):
         MyTreeWidget.__init__(self, parent, self.create_menu,[
             _('Amount'),
-            _('Height')], 1, deferred_updates=True)
+            _('Contract expires in: ')], 1, deferred_updates=True)
         self.utxos = utxos
+        self.main_window=parent
         print(self.utxos)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setSortingEnabled(True)
@@ -261,7 +262,7 @@ class UtxoList(MyTreeWidget, MessageBoxMixin):
         self.lightBlue = QColor('lightblue') if not ColorScheme.dark_scheme else QColor('blue')
         self.blue = ColorScheme.BLUE.as_color(True)
         self.cyanBlue = QColor('#3399ff')
-        print("initializing utxo list")
+
 
     def create_menu(self, position):
         pass
@@ -272,12 +273,10 @@ class UtxoList(MyTreeWidget, MessageBoxMixin):
         super().update()
 
     def on_update(self):
-        print("this is on_update")
         for x in [self.utxos]:
-            height = x.get('height')
-            print(height)
+            expiration = self.estimate_expiration(x)
             amount = self.parent.format_amount(x.get('value'), is_diff=False, whitespaces=True)
-            utxo_item = SortableTreeWidgetItem([amount, str(height)])
+            utxo_item = SortableTreeWidgetItem([amount, expiration])
             print(amount)
             self.addChild(utxo_item)
 
@@ -290,19 +289,18 @@ class UtxoList(MyTreeWidget, MessageBoxMixin):
     def estimate_expiration(self, entry):
         """estimates age of the utxo in days. There are 144 blocks per day on average"""
         txHeight = entry.get("height")
-        age = self.get_age()
-        print("Age: " +str(age) + " Height: "+str(txHeight))
+        age = self.get_age(entry)
         if txHeight==0 :
             label = _("Waiting for confirmation.")
         elif (180-age) > 0:
-            label = _("Contract expires in:" +str(180-age)+ " days"  )
+            label = _(str(180-age)+ " days"  )
         else :
             label = _("Last Will is ready to be inherited.")
         return label
 
-    def refresh_lock(self):
+    def refresh_lock(self,entry):
         """Contract can be refreshed only when it's one week old"""
-        txHeight = self.manager.tx.get("height")
+        txHeight = entry.get("height")
         age = self.get_age()
         print("Age: " +str(age) + " Height: "+str(txHeight))
         if txHeight==0 :
