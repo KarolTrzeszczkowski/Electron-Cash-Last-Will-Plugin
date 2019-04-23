@@ -20,6 +20,40 @@ from .util import *
 import time, json
 from math import ceil
 
+class UtxoWindow(QDialog):
+    def __init__(self,parent, utxos):
+        QDialog.__init__(self, parent=None)
+        vbox = QVBoxLayout()
+        self.setLayout(vbox)
+        l=UtxoList(parent,utxos)
+        vbox.addWidget(l)
+
+class UtxoList(MyTreeWidget, MessageBoxMixin):
+    def __init__(self, parent, utxos):
+        MyTreeWidget.__init__(self, parent, self.create_menu, [
+            ('Age'),
+            ('Value'),
+        ], 0, [])
+        self.utxos = utxos
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.setSortingEnabled(True)
+
+    def create_menu(self, position):
+        pass
+
+    def on_update(self):
+        item = self.currentItem()
+        current_key = item.data(0, Qt.UserRole) if item else None
+        for u in self.utxos:
+            if row_key == current_key:
+                self.setCurrentItem(item)
+            val = [
+                u.get('height'),
+                u.get('value'),
+                u.get('txid')
+            ]
+            item = QTreeWidgetItem(val)
+            self.addTopLevelItem(item)
 
 
 class Intro(QDialog, MessageBoxMixin):
@@ -58,10 +92,15 @@ class Intro(QDialog, MessageBoxMixin):
         vbox.addStretch(1)
 
     def handle_finding(self):
-        print(find_contract(self.wallet))
         try:
             self.contractTx, self.contract, self.role = find_contract(self.wallet)[0] # grab first contract, multicontract support later
-        except:
+            utxo = UtxoWindow(self.main_window, self.contractTx)
+            utxo.show()
+            if len(self.contractTx) == 1:
+                self.contractTx = self.contractTx[0]
+            time.sleep(3)
+        except Exception as ex:
+            print(ex)
             print("No contract")
         else:
             self.start_manager()

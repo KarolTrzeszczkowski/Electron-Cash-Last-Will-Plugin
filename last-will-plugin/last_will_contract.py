@@ -2,6 +2,7 @@ from electroncash.bitcoin import regenerate_key, MySigningKey, Hash
 from electroncash.address import Address, OpCodes as Op
 import ecdsa
 from electroncash.plugins import hook
+from .util import UtxoWindow
 from math import ceil
 
 import time
@@ -73,7 +74,6 @@ class LastWillContract:
 class LastWillContractManager:
     """A device that spends the Last Will in three different ways."""
     def __init__(self,tx, contract, pub, priv, mode):
-
         self.tx=tx
         self.mode = mode
         self.public = pub

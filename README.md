@@ -86,9 +86,13 @@ The plugin will appear as one of the tabs.
 ## Creating a Last Will contract
 In the plugin tab you will see three buttons.
 ![intro](/pictures/intro.png)
+
 Click *Create Last Will contract* to create a new contract.
 Fill the fields.
+
 ![creating](/pictures/creating.png)
+
+Pressing create button will make an initial transaction, that sends dust to your cold wallet, inheritors wallet and refreshing wallet, has a contract address as an OP_RETURN output and prepares the exact amount you have chosen to be sent to your contract. After the initial transaction you will be asked to send the money to the contract. You'll see a transaction window. Broadcast the transaction to put your money in the contract.
 
 ## Licho Notification Service
 
@@ -101,22 +105,48 @@ The notification service is also a solution to the issue, that a wallet without 
 If you decide to order an e-mail notification, a transaction will be created. It will be of the value of the fee for the services and it will have an encrypted email address attached as the OP_RETURN data. For the inheritor notification, an encrypted e-mail and the contract address will be attached. 
 
 ## Refreshing the contract
+From your refreshing wallet, in the Last Will tab click *Find existing Last Will contract*. You'll see your contract information and and an option to setup a notification service for the next refreshing period.
+
+![refreshing](/pictures/refresh.png)
+
+Click on *Refresh* button and you will see a refresh transaction window. Broadcasting it will inform your contract that you are alive and postpone execution of your will for the next six months.
 
 ## Ending the contract
 
+From your "watch only" wallet, in the Last Will tab click *Find existing Last Will contract*. You will see an option to export your contract information. (Every refreshing obsoletes the exported information so make sure you have a fresh info file for the next step.)
+
+![export](/pictures/export.png)
+
+Then, go to your cold storage, install the plugin and *Load Last Will contract info*. You'll see the same contract management tab as after clicking *Find existing Last Will contract* but without the need to be connected to the internet. Now you can click *End contract* and save the transaction. Save it and take to a computer connected to the internet. in Electron Cash window click *Tools*>*Load Transaction*, load and broadcast the transaction generated on your cold machine.
+
+
+
 ## Inheriting
+
+If you are inheritor and you suspect you've inherited Bitcoin Cash with the Last Will contract, you need to install the plugin in your Electron Cash, click *Find existing Last Will contract* and click *Inherit*. A transaction window, that will send the money from the contract to your address will appear.
+
+![export](/pictures/inherit.png)
+
+After broadcasting the transaction to the network, money should appear in your wallet. If you get an error while trying to broadcast the transaction, you probably have to wait some time for the contract to expire, as the time
+
+
+## Disclaimer
+
+The author of this software is not a party to a Last Will contract, have no control over it and cannot influence it's outcome. The author is not responsible for legal implications of the Last Will contract nor is competent to settle any disputes. The author is not responsible for the contract expected behavior.
 
 ## License
 
 This software is distributed on GPL v3 license. The author encourage you to build your own smart contract plugins based on Last Will plugin code, implement desired functions and submit a pull request to this repository or fork this project and compete, if I fail to deliver what you expect. Just remember to publish your improvements on the same license.
+
 ## Special thanks
 
 I want to thank **Mark Lundeberg** for solving the vast majority of my problems. I would never get this to work if he wasn't there to help me. I based on his work a lot. The Last Will plugin is a ship of theseus<sup>[3](https://en.wikipedia.org/wiki/Ship_of_Theseus)</sup> [coinsplitter](https://github.com/KarolTrzeszczkowski/Coinsplitter-Plugin) that I modified until it stopped to quack like a duck.<sup>[4](https://en.wikipedia.org/wiki/Duck_test)</sup>
 
 I also want to thank to **Pein_Sama** for help with spedn and the creation of the entire idea of looping transactions in his [famous article](https://honest.cash/pein_sama/spending-constraints-with-op_checkdatasig-172).
+
 ## Donations
 
-The best form of support is **using** this plugin and notification service. If you wish to support Licho the other way, consider donating to the following addresses:
+If you wish to support development of the Licho Last Will plugin, consider donating to the following addresses:
 
 Cash Account: Licho#14431
 
