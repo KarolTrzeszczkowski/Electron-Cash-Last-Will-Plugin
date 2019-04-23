@@ -127,7 +127,8 @@ class Create(QDialog, MessageBoxMixin):
         self.password=None
         self.contract=None
         if self.wallet.has_password():
-            self.main_window.show_error(_("Last Will requires password. It will get access to your private keys."))
+            self.main_window.show_error(_(
+                "Last Will requires password. It will get access to your private keys."))
             self.password = parent.password_dialog()
             if not self.password:
                 print("no password")
@@ -251,17 +252,16 @@ class Create(QDialog, MessageBoxMixin):
 class UtxoList(MyTreeWidget, MessageBoxMixin):
     def __init__(self, parent, utxos):
         MyTreeWidget.__init__(self, parent, self.create_menu,[
-            _('Amount'),
-            _('Contract expires in: ')], 1, deferred_updates=True)
+            _('Contract'),
+            _('Contract expires in: '),
+            _('Refresh lock: '),
+            _('Amount')], 1, deferred_updates=True)
         self.utxos = utxos
         self.main_window=parent
         print(self.utxos)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setSortingEnabled(True)
-        self.monospaceFont = QFont(MONOSPACE_FONT)
-        self.lightBlue = QColor('lightblue') if not ColorScheme.dark_scheme else QColor('blue')
-        self.blue = ColorScheme.BLUE.as_color(True)
-        self.cyanBlue = QColor('#3399ff')
+
 
 
     def create_menu(self, position):
@@ -272,19 +272,27 @@ class UtxoList(MyTreeWidget, MessageBoxMixin):
             return
         super().update()
 
-    def on_update(self):
-        for x in [self.utxos]:
-            expiration = self.estimate_expiration(x)
-            amount = self.parent.format_amount(x.get('value'), is_diff=False, whitespaces=True)
-            utxo_item = SortableTreeWidgetItem([amount, expiration])
-            print(amount)
-            self.addChild(utxo_item)
+    def get_selected_id(self):
+        return self.selectedItems()[3]
 
-    def get_age(self):
+    def on_update(self):
+        twoContracts=[([self.utxos,self.utxos],'address1',1),([self.utxos,self.utxos],'address2',1)]
+        for c in twoContracts:
+            contract = QTreeWidgetItem([c[1],'','',''])
+            self.addChild(contract)
+            for x in c[0]:
+                expiration = self.estimate_expiration(x)
+                lock = self.refresh_lock(x)
+                amount = self.parent.format_amount(x.get('value'), is_diff=False, whitespaces=True)
+                txid = x['tx_hash']
+                utxo_item = SortableTreeWidgetItem([txid, expiration, lock, amount])
+                contract.addChild(utxo_item)
+
+    def get_age(self, entry):
         txHeight = entry.get("height")
         currentHeight=self.main_window.network.get_local_height()
         age = ceil((currentHeight-txHeight)/144)
-        return age,
+        return age
 
     def estimate_expiration(self, entry):
         """estimates age of the utxo in days. There are 144 blocks per day on average"""
@@ -293,7 +301,7 @@ class UtxoList(MyTreeWidget, MessageBoxMixin):
         if txHeight==0 :
             label = _("Waiting for confirmation.")
         elif (180-age) > 0:
-            label = _(str(180-age)+ " days"  )
+            label = str(180-age) +" days"
         else :
             label = _("Last Will is ready to be inherited.")
         return label
@@ -301,14 +309,14 @@ class UtxoList(MyTreeWidget, MessageBoxMixin):
     def refresh_lock(self,entry):
         """Contract can be refreshed only when it's one week old"""
         txHeight = entry.get("height")
-        age = self.get_age()
-        print("Age: " +str(age) + " Height: "+str(txHeight))
+        age = self.get_age(entry)
+        # print("Age: " +str(age) + " Height: "+str(txHeight))
         if txHeight==0 :
-            label = _("Refresh lock: " + str(7) + " days")
+            label = str(7) + _(" days")
         elif (7-age) > 0:
-            label = _("Refresh lock:" + str(8-age) + " days" )
+            label = str(8-age) + _(" days" )
         else :
-            label = _("You can refresh your contract.")
+            label = _("You can refresh")
         return label
 
 
@@ -316,7 +324,6 @@ class UtxoList(MyTreeWidget, MessageBoxMixin):
 class Manage(QDialog, MessageBoxMixin):
     def __init__(self, parent, plugin, wallet_name, password, manager):
         QDialog.__init__(self, parent)
-
         self.password=password
 
         self.main_window = parent
@@ -330,15 +337,10 @@ class Manage(QDialog, MessageBoxMixin):
         self.fee=1000
 
         self.mode_label = QLabel()
-        # vbox.addWidget(self.mode_label)
-        # l = QLabel(_("Value :" + str(self.manager.tx.get("value"))))
-        # vbox.addWidget(l)
-        # label = self.estimate_expiration()
-        # l= QLabel(label)
-        # vbox.addWidget(l)
-        l=UtxoList(self.main_window,self.manager.tx)
-        l.on_update()
-        vbox.addWidget(l)
+
+        self.utxoList = UtxoList(self.main_window,self.manager.tx)
+        self.utxoList.on_update()
+        vbox.addWidget(self.utxoList)
         if self.manager.mode==0:
             self.mode_label.setText(_("<b>%s</b>" % (_("This is refreshing wallet."))))
             b = QPushButton(_("Refresh"))
@@ -360,8 +362,6 @@ class Manage(QDialog, MessageBoxMixin):
             b = QPushButton(_("Inherit"))
             b.clicked.connect(self.end)
             vbox.addWidget(b)
-
-
 
     def end(self):
         inputs = [self.manager.txin]
