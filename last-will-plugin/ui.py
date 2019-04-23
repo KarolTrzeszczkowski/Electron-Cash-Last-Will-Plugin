@@ -20,40 +20,6 @@ from .util import *
 import time, json
 from math import ceil
 
-class UtxoWindow(QDialog):
-    def __init__(self,parent, utxos):
-        QDialog.__init__(self, parent=None)
-        vbox = QVBoxLayout()
-        self.setLayout(vbox)
-        l=UtxoList(parent,utxos)
-        vbox.addWidget(l)
-
-class UtxoList(MyTreeWidget, MessageBoxMixin):
-    def __init__(self, parent, utxos):
-        MyTreeWidget.__init__(self, parent, self.create_menu, [
-            ('Age'),
-            ('Value'),
-        ], 0, [])
-        self.utxos = utxos
-        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.setSortingEnabled(True)
-
-    def create_menu(self, position):
-        pass
-
-    def on_update(self):
-        item = self.currentItem()
-        current_key = item.data(0, Qt.UserRole) if item else None
-        for u in self.utxos:
-            if row_key == current_key:
-                self.setCurrentItem(item)
-            val = [
-                u.get('height'),
-                u.get('value'),
-                u.get('txid')
-            ]
-            item = QTreeWidgetItem(val)
-            self.addTopLevelItem(item)
 
 
 class Intro(QDialog, MessageBoxMixin):
@@ -94,8 +60,6 @@ class Intro(QDialog, MessageBoxMixin):
     def handle_finding(self):
         try:
             self.contractTx, self.contract, self.role = find_contract(self.wallet)[0] # grab first contract, multicontract support later
-            utxo = UtxoWindow(self.main_window, self.contractTx)
-            utxo.show()
             if len(self.contractTx) == 1:
                 self.contractTx = self.contractTx[0]
             time.sleep(3)
@@ -284,6 +248,72 @@ class Create(QDialog, MessageBoxMixin):
         return None
 
 
+class UtxoList(MyTreeWidget, MessageBoxMixin):
+    def __init__(self, parent, utxos):
+        MyTreeWidget.__init__(self, parent, self.create_menu,[
+            _('Amount'),
+            _('Height')], 1, deferred_updates=True)
+        self.utxos = utxos
+        print(self.utxos)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.setSortingEnabled(True)
+        self.monospaceFont = QFont(MONOSPACE_FONT)
+        self.lightBlue = QColor('lightblue') if not ColorScheme.dark_scheme else QColor('blue')
+        self.blue = ColorScheme.BLUE.as_color(True)
+        self.cyanBlue = QColor('#3399ff')
+        print("initializing utxo list")
+
+    def create_menu(self, position):
+        pass
+
+    def update(self):
+        if self.wallet and (not self.wallet.thread or not self.wallet.thread.isRunning()):
+            return
+        super().update()
+
+    def on_update(self):
+        print("this is on_update")
+        for x in [self.utxos]:
+            height = x.get('height')
+            print(height)
+            amount = self.parent.format_amount(x.get('value'), is_diff=False, whitespaces=True)
+            utxo_item = SortableTreeWidgetItem([amount, str(height)])
+            print(amount)
+            self.addChild(utxo_item)
+
+    def get_age(self):
+        txHeight = entry.get("height")
+        currentHeight=self.main_window.network.get_local_height()
+        age = ceil((currentHeight-txHeight)/144)
+        return age,
+
+    def estimate_expiration(self, entry):
+        """estimates age of the utxo in days. There are 144 blocks per day on average"""
+        txHeight = entry.get("height")
+        age = self.get_age()
+        print("Age: " +str(age) + " Height: "+str(txHeight))
+        if txHeight==0 :
+            label = _("Waiting for confirmation.")
+        elif (180-age) > 0:
+            label = _("Contract expires in:" +str(180-age)+ " days"  )
+        else :
+            label = _("Last Will is ready to be inherited.")
+        return label
+
+    def refresh_lock(self):
+        """Contract can be refreshed only when it's one week old"""
+        txHeight = self.manager.tx.get("height")
+        age = self.get_age()
+        print("Age: " +str(age) + " Height: "+str(txHeight))
+        if txHeight==0 :
+            label = _("Refresh lock: " + str(7) + " days")
+        elif (7-age) > 0:
+            label = _("Refresh lock:" + str(8-age) + " days" )
+        else :
+            label = _("You can refresh your contract.")
+        return label
+
+
 
 class Manage(QDialog, MessageBoxMixin):
     def __init__(self, parent, plugin, wallet_name, password, manager):
@@ -302,17 +332,16 @@ class Manage(QDialog, MessageBoxMixin):
         self.fee=1000
 
         self.mode_label = QLabel()
-        vbox.addWidget(self.mode_label)
-        l = QLabel(_("Value :" + str(self.manager.tx.get("value"))))
+        # vbox.addWidget(self.mode_label)
+        # l = QLabel(_("Value :" + str(self.manager.tx.get("value"))))
+        # vbox.addWidget(l)
+        # label = self.estimate_expiration()
+        # l= QLabel(label)
+        # vbox.addWidget(l)
+        l=UtxoList(self.main_window,self.manager.tx)
+        l.on_update()
         vbox.addWidget(l)
-        label = self.estimate_expiration()
-        l= QLabel(label)
-        vbox.addWidget(l)
-
         if self.manager.mode==0:
-            label = self.refresh_lock()
-            l = QLabel(label)
-            vbox.addWidget(l)
             self.mode_label.setText(_("<b>%s</b>" % (_("This is refreshing wallet."))))
             b = QPushButton(_("Refresh"))
             b.clicked.connect(self.refresh)
@@ -369,37 +398,6 @@ class Manage(QDialog, MessageBoxMixin):
 
         self.plugin.switch_to(Intro, self.wallet_name,None,None)
 
-    def get_age(self):
-        txHeight = self.manager.tx.get("height")
-        currentHeight=self.main_window.network.get_local_height()
-        age = ceil((currentHeight-txHeight)/144)
-        return age
-
-    def refresh_lock(self):
-        """Contract can be refreshed only when it's one week old"""
-        txHeight = self.manager.tx.get("height")
-        age = self.get_age()
-        print("Age: " +str(age) + " Height: "+str(txHeight))
-        if txHeight==0 :
-            label = _("Refresh lock: " + str(7) + " days")
-        elif (7-age) > 0:
-            label = _("Refresh lock:" + str(8-age) + " days" )
-        else :
-            label = _("You can refresh your contract.")
-        return label
-
-    def estimate_expiration(self):
-        """estimates age of the utxo in days. There are 144 blocks per day on average"""
-        txHeight = self.manager.tx.get("height")
-        age = self.get_age()
-        print("Age: " +str(age) + " Height: "+str(txHeight))
-        if txHeight==0 :
-            label = _("Waiting for confirmation.")
-        elif (180-age) > 0:
-            label = _("Contract expires in:" +str(180-age)+ " days"  )
-        else :
-            label = _("Last Will is ready to be inherited.")
-        return label
 
     def export(self):
         name = "Last_Will_Contract_Info_"+ time.strftime("%b%d%Y",time.localtime(time.time())) +".json"

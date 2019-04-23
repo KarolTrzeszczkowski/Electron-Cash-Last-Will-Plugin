@@ -2,7 +2,6 @@ from electroncash.bitcoin import regenerate_key, MySigningKey, Hash
 from electroncash.address import Address, OpCodes as Op
 import ecdsa
 from electroncash.plugins import hook
-from .util import UtxoWindow
 from math import ceil
 
 import time
