@@ -72,17 +72,23 @@ class LastWillContract:
 
 class LastWillContractManager:
     """A device that spends the Last Will in three different ways."""
-    def __init__(self,tx, contract, pub, priv, mode):
-        self.tx=tx
-        self.mode = mode
-        self.public = pub
-        self.keypair = {pub[0]: (priv, True)}
-        self.contract = contract
+    def __init__(self, contracts, keypairs, wallet):
+        self.contracts = contracts
+        self.tx=contracts[0][0][0]
+        self.contract = contracts[0][1]
+        self.mode = contracts[0][2]
+        self.keypair = dict(keypairs)
+        self.pubkeys = list(keypairs)
+        self.wallet = wallet
+
+
+
+
         self.dummy_scriptsig = '00'*(74 + len(self.contract.redeemscript))
 
-        if mode == 0:
+        if self.mode == 0:
             self.sequence=2**22+self.contract.time2
-        elif mode == 2:
+        elif self.mode == 2:
             self.sequence=2**22+self.contract.time1
         else:
             self.sequence = 0
@@ -98,7 +104,7 @@ class LastWillContractManager:
             scriptCode = self.contract.redeemscript.hex(),
             num_sig = 1,
             signatures = [None],
-            x_pubkeys = pub,
+            x_pubkeys = self.pubkeys[0],
             value = self.value,
             )
 
@@ -124,7 +130,7 @@ class LastWillContractManager:
             option = Op.OP_2
         else :
             option = Op.OP_3
-        pub = bytes.fromhex(self.public[0])
+        pub = bytes.fromhex(self.pubkeys[0][0])
         for txin in tx.inputs():
             # find matching inputs
             if txin['address'] != self.contract.address:
@@ -146,7 +152,7 @@ class LastWillContractManager:
 
     def completetx_ref(self, tx):
 
-        pub = bytes.fromhex(self.public[0])
+        pub = bytes.fromhex(self.pubkeys[0][0])
 
         for i, txin in enumerate(tx.inputs()):
             # find matching inputs
@@ -159,7 +165,7 @@ class LastWillContractManager:
             sig = bytes.fromhex(sig)
             print("Signature size:" + str(len(sig)))
             if txin['scriptSig'] == self.dummy_scriptsig:
-                self.checkd_data_sig(sig,preimage,self.public[0])
+                self.checkd_data_sig(sig,preimage,self.pubkeys[0][0])
 
                 ver=preimage[:4]
                 hPhSo=preimage[4:104]

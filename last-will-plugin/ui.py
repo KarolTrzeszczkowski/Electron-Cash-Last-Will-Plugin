@@ -19,7 +19,7 @@ from .notification_service import NotificationWidget
 from .util import *
 import time, json
 from math import ceil
-
+from collections import OrderedDict
 
 
 class Intro(QDialog, MessageBoxMixin):
@@ -33,6 +33,7 @@ class Intro(QDialog, MessageBoxMixin):
         self.config = parent.config
         vbox = QVBoxLayout()
         self.setLayout(vbox)
+        self.contracts=None
         self.contract=None
         self.contractTx=None
         self.manager=None
@@ -59,9 +60,7 @@ class Intro(QDialog, MessageBoxMixin):
 
     def handle_finding(self):
         try:
-            self.contractTx, self.contract, self.role = find_contract(self.wallet)[0] # grab first contract, multicontract support later
-            if len(self.contractTx) == 1:
-                self.contractTx = self.contractTx[0]
+            self.contracts = find_contract(self.wallet)
             time.sleep(3)
         except Exception as ex:
             print(ex)
@@ -89,27 +88,38 @@ class Intro(QDialog, MessageBoxMixin):
             self.start_manager()
 
     def start_manager(self):
+        try:
+            keypairs = self.get_keypairs_for_contracts(self.contracts)
+            self.manager = LastWillContractManager(self.contracts, keypairs, self.wallet)
+            self.plugin.switch_to(Manage, self.wallet_name, self.password, self.manager)
+        except Exception as es:
+            print(es)
+            self.show_error("Wrong wallet.")
+            self.plugin.switch_to(Intro,self.wallet_name,None,None)
+
+    def get_keypairs_for_contracts(self, contracts):
         if self.wallet.has_password():
             self.main_window.show_error(_(
                 "Last Will Contract found! Last Will plugin requires password. It will get access to your private keys."))
             self.password = self.main_window.password_dialog()
             if not self.password:
                 return
-        i = self.wallet.get_address_index(self.contract.addresses[self.role])
-        if not self.wallet.is_watching_only():
-            priv = self.wallet.keystore.get_private_key(i, self.password)[0]
-        else:
-            print("watch only")
-            priv = None
-        try:
-            public = self.wallet.get_public_keys(self.contract.addresses[self.role])
-            self.manager = LastWillContractManager(self.contractTx, self.contract, public, priv, self.role)
-            self.plugin.switch_to(Manage, self.wallet_name, self.password, self.manager)
-        except:
-            self.show_error("Wrong wallet.")
-            self.plugin.switch_to(Intro,self.wallet_name,None,None)
+        keypairs = OrderedDict()
+        for c in contracts:
+            myAddress=c[1].addresses[c[2]]
+            i = self.wallet.get_address_index(myAddress)
+            if not self.wallet.is_watching_only():
+                priv = self.wallet.keystore.get_private_key(i, self.password)[0]
+            else:
+                print("watch only")
+                priv = None
+            try:
+                public = self.wallet.get_public_keys(myAddress)
+                keypairs[public[0]] = (priv, True)
+            except Exception as ex:
+                print(ex)
 
-
+        return keypairs
 
 
 
@@ -250,19 +260,16 @@ class Create(QDialog, MessageBoxMixin):
 
 
 class UtxoList(MyTreeWidget, MessageBoxMixin):
-    def __init__(self, parent, utxos):
+    def __init__(self, parent, contracts):
         MyTreeWidget.__init__(self, parent, self.create_menu,[
-            _('Contract'),
+            _('Id'),
             _('Contract expires in: '),
             _('Refresh lock: '),
             _('Amount')], 1, deferred_updates=True)
-        self.utxos = utxos
-        self.main_window=parent
-        print(self.utxos)
+        self.contracts = contracts
+        self.main_window = parent
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setSortingEnabled(True)
-
-
 
     def create_menu(self, position):
         pass
@@ -273,20 +280,33 @@ class UtxoList(MyTreeWidget, MessageBoxMixin):
         super().update()
 
     def get_selected_id(self):
-        return self.selectedItems()[3]
+        return self.selectedItems()[0]
 
     def on_update(self):
-        twoContracts=[([self.utxos,self.utxos],'address1',1),([self.utxos,self.utxos],'address2',1)]
-        for c in twoContracts:
-            contract = QTreeWidgetItem([c[1],'','',''])
-            self.addChild(contract)
-            for x in c[0]:
-                expiration = self.estimate_expiration(x)
-                lock = self.refresh_lock(x)
-                amount = self.parent.format_amount(x.get('value'), is_diff=False, whitespaces=True)
-                txid = x['tx_hash']
-                utxo_item = SortableTreeWidgetItem([txid, expiration, lock, amount])
-                contract.addChild(utxo_item)
+        print(self.contracts[0][0])
+        if len(self.contracts) == 1 and len(self.contracts[0][0])==1:
+            x = self.contracts[0][0][0]
+            self.add_item(x, self)
+        else:
+            print("up")
+            for c in self.contracts:
+                print(c[1])
+                contract = QTreeWidgetItem([c[1].address.to_ui_string(),'','',''])
+                print('up')
+                self.addChild(contract)
+                print(c[0][0])
+                for x in c[0]:
+                    print('up')
+                    self.add_item(x, contract)
+
+    def add_item(self, x, parent_item):
+        expiration = self.estimate_expiration(x)
+        lock = self.refresh_lock(x)
+        amount = self.parent.format_amount(x.get('value'), is_diff=False, whitespaces=True)
+        txid = x['tx_hash']
+        utxo_item = SortableTreeWidgetItem([txid, expiration, lock, amount])
+        parent_item.addChild(utxo_item)
+
 
     def get_age(self, entry):
         txHeight = entry.get("height")
@@ -320,7 +340,6 @@ class UtxoList(MyTreeWidget, MessageBoxMixin):
         return label
 
 
-
 class Manage(QDialog, MessageBoxMixin):
     def __init__(self, parent, plugin, wallet_name, password, manager):
         QDialog.__init__(self, parent)
@@ -338,7 +357,7 @@ class Manage(QDialog, MessageBoxMixin):
 
         self.mode_label = QLabel()
 
-        self.utxoList = UtxoList(self.main_window,self.manager.tx)
+        self.utxoList = UtxoList(self.main_window,self.manager.contracts)
         self.utxoList.on_update()
         vbox.addWidget(self.utxoList)
         if self.manager.mode==0:
