@@ -76,10 +76,10 @@ class LastWillContractManager:
     """A device that spends the Last Will in three different ways."""
     def __init__(self, contracts, keypairs, wallet):
         self.contracts = contracts
-        self.index=0
-        self.tx = contracts[self.index][0][UTXO]
-        self.contract = contracts[self.index][CONTRACT]
-        self.mode = contracts[self.index][MODE]
+        self.contract_index=0
+        self.tx = contracts[self.contract_index][0][UTXO]
+        self.contract = contracts[self.contract_index][CONTRACT]
+        self.mode = contracts[self.contract_index][MODE]
         self.keypair = dict(keypairs)
         self.pubkeys = list(keypairs)
         self.wallet = wallet
@@ -95,14 +95,16 @@ class LastWillContractManager:
         self.value = int(self.tx.get('value'))
 
         self.txin = dict()
-    def choice(self, choice):
-        utxo=choice[0]
-        c=choice[1]
-        self.index = self.contracts.index(c)
-        print(self.index)
+
+    def choice(self, contract, utxo_index = 0):
+        if utxo_index==-1:
+            print("Selected a contract")
+        utxo=contract[UTXO][utxo_index]
+        self.contract_index = self.contracts.index(contract)
+        print(self.contract_index)
         self.value = int(utxo.get('value'))
         print("pubkey: ")
-        print(self.pubkeys[self.index])
+        print(self.pubkeys[self.contract_index])
         self.txin = dict(
             prevout_hash=utxo.get('tx_hash'),
             prevout_n=int(utxo.get('tx_pos')),
@@ -113,7 +115,7 @@ class LastWillContractManager:
             scriptCode=self.contract.redeemscript.hex(),
             num_sig=1,
             signatures=[None],
-            x_pubkeys=[self.pubkeys[self.index]],
+            x_pubkeys=[self.pubkeys[self.contract_index]],
             value=self.value,
         )
 
@@ -133,7 +135,7 @@ class LastWillContractManager:
             option = Op.OP_2
         else :
             option = Op.OP_3
-        pub = bytes.fromhex(self.pubkeys[self.index])
+        pub = bytes.fromhex(self.pubkeys[self.contract_index])
         for txin in tx.inputs():
             # find matching inputs
             if txin['address'] != self.contract.address:
@@ -155,7 +157,7 @@ class LastWillContractManager:
 
     def completetx_ref(self, tx):
 
-        pub = bytes.fromhex(self.pubkeys[self.index])
+        pub = bytes.fromhex(self.pubkeys[self.contract_index])
 
         for i, txin in enumerate(tx.inputs()):
             # find matching inputs
@@ -168,7 +170,7 @@ class LastWillContractManager:
             sig = bytes.fromhex(sig)
             print("Signature size:" + str(len(sig)))
             if txin['scriptSig'] == self.dummy_scriptsig:
-                self.checkd_data_sig(sig,preimage,self.pubkeys[self.index])
+                self.checkd_data_sig(sig, preimage, self.pubkeys[self.contract_index])
 
                 ver=preimage[:4]
                 hPhSo=preimage[4:104]

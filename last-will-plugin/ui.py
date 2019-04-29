@@ -283,7 +283,11 @@ class UtxoList(MyTreeWidget, MessageBoxMixin):
     def get_selected_id(self):
         utxo = self.currentItem().data(0, Qt.UserRole)
         contract = self.currentItem().data(1, Qt.UserRole)
-        return utxo, contract
+        if utxo == None:
+            index = -1
+        else:
+            index = contract[UTXO].index(utxo)
+        return contract, index
 
     def on_update(self):
         if len(self.contracts) == 1 and len(self.contracts[0][UTXO])==1:
@@ -293,6 +297,7 @@ class UtxoList(MyTreeWidget, MessageBoxMixin):
         else:
             for c in self.contracts:
                 contract = QTreeWidgetItem([c[1].address.to_ui_string(),'','','',role_name(c[MODE])])
+                contract.setData(1, Qt.UserRole, c)
                 self.addChild(contract)
                 for x in c[UTXO]:
                     item = self.add_item(x, contract, c)
@@ -382,7 +387,8 @@ class Manage(QDialog, MessageBoxMixin):
             vbox.addWidget(b)
 
     def end(self):
-        self.manager.choice(self.utxoList.get_selected_id())
+        contract, utxo_index = self.utxoList.get_selected_id()
+        self.manager.choice(contract, utxo_index)
         inputs = [self.manager.txin]
         outputs = [(TYPE_ADDRESS, self.manager.contract.addresses[self.manager.mode], self.manager.value - self.fee)]
         tx = Transaction.from_io(inputs, outputs, locktime=0)
@@ -394,7 +400,8 @@ class Manage(QDialog, MessageBoxMixin):
         self.plugin.switch_to(Intro, self.wallet_name, None, None)
 
     def refresh(self):
-        self.manager.choice(self.utxoList.get_selected_id())
+        contract, utxo_index = self.utxoList.get_selected_id()
+        self.manager.choice(contract, utxo_index)
         if self.manager.mode!=0:
             print("This wallet can't refresh a contract!")
             return
