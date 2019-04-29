@@ -6,7 +6,9 @@ from math import ceil
 
 import time
 LOCKTIME_THRESHOLD = 500000000
-
+UTXO=0
+CONTRACT=1
+MODE=2
 def joinbytes(iterable):
     """Joins an iterable of bytes and/or integers into a single byte string"""
     return b''.join((bytes((x,)) if isinstance(x,int) else x) for x in iterable)
@@ -74,15 +76,13 @@ class LastWillContractManager:
     """A device that spends the Last Will in three different ways."""
     def __init__(self, contracts, keypairs, wallet):
         self.contracts = contracts
-        self.tx=contracts[0][0][0]
-        self.contract = contracts[0][1]
-        self.mode = contracts[0][2]
+        self.index=0
+        self.tx = contracts[self.index][0][UTXO]
+        self.contract = contracts[self.index][CONTRACT]
+        self.mode = contracts[self.index][MODE]
         self.keypair = dict(keypairs)
         self.pubkeys = list(keypairs)
         self.wallet = wallet
-
-
-
 
         self.dummy_scriptsig = '00'*(74 + len(self.contract.redeemscript))
 
@@ -92,28 +92,31 @@ class LastWillContractManager:
             self.sequence=2**22+self.contract.time1
         else:
             self.sequence = 0
-        self.value=int(self.tx.get('value'))
+        self.value = int(self.tx.get('value'))
 
+        self.txin = dict()
+    def choice(self, choice):
+        utxo=choice[0]
+        c=choice[1]
+        self.index = self.contracts.index(c)
+        print(self.index)
+        self.value = int(utxo.get('value'))
+        print("pubkey: ")
+        print(self.pubkeys[self.index])
         self.txin = dict(
-            prevout_hash = self.tx.get('tx_hash'),
-            prevout_n = int(self.tx.get('tx_pos')),
-            sequence = self.sequence,
-            scriptSig = self.dummy_scriptsig,
-            type = 'unknown',
-            address = self.contract.address,
-            scriptCode = self.contract.redeemscript.hex(),
-            num_sig = 1,
-            signatures = [None],
-            x_pubkeys = self.pubkeys[0],
-            value = self.value,
-            )
+            prevout_hash=utxo.get('tx_hash'),
+            prevout_n=int(utxo.get('tx_pos')),
+            sequence=self.sequence,
+            scriptSig=self.dummy_scriptsig,
+            type='unknown',
+            address=self.contract.address,
+            scriptCode=self.contract.redeemscript.hex(),
+            num_sig=1,
+            signatures=[None],
+            x_pubkeys=[self.pubkeys[self.index]],
+            value=self.value,
+        )
 
-
-    @hook
-    def sign_tx(self, tx):
-        """generic tx signer for compressed pubkey"""
-        tx.sign(self.keypair)
-        self.completetx(tx)
 
     def signtx(self, tx):
         """generic tx signer for compressed pubkey"""
@@ -130,7 +133,7 @@ class LastWillContractManager:
             option = Op.OP_2
         else :
             option = Op.OP_3
-        pub = bytes.fromhex(self.pubkeys[0][0])
+        pub = bytes.fromhex(self.pubkeys[self.index])
         for txin in tx.inputs():
             # find matching inputs
             if txin['address'] != self.contract.address:
@@ -152,7 +155,7 @@ class LastWillContractManager:
 
     def completetx_ref(self, tx):
 
-        pub = bytes.fromhex(self.pubkeys[0][0])
+        pub = bytes.fromhex(self.pubkeys[self.index])
 
         for i, txin in enumerate(tx.inputs()):
             # find matching inputs
@@ -165,7 +168,7 @@ class LastWillContractManager:
             sig = bytes.fromhex(sig)
             print("Signature size:" + str(len(sig)))
             if txin['scriptSig'] == self.dummy_scriptsig:
-                self.checkd_data_sig(sig,preimage,self.pubkeys[0][0])
+                self.checkd_data_sig(sig,preimage,self.pubkeys[self.index])
 
                 ver=preimage[:4]
                 hPhSo=preimage[4:104]

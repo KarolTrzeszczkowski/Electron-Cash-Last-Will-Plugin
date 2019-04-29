@@ -14,7 +14,7 @@ from electroncash.wallet import Multisig_Wallet
 from electroncash.util import NotEnoughFunds
 from electroncash_gui.qt.transaction_dialog import show_transaction
 from .contract_finder import find_contract, extract_contract_data
-from .last_will_contract import LastWillContractManager
+from .last_will_contract import LastWillContractManager, UTXO, CONTRACT, MODE
 from .notification_service import NotificationWidget
 from .util import *
 import time, json
@@ -38,7 +38,7 @@ class Intro(QDialog, MessageBoxMixin):
         self.contractTx=None
         self.manager=None
         self.password = None
-        self.role=0
+        self.mode=0
         hbox = QHBoxLayout()
         if is_expired():
             l = QLabel(_("Please update your plugin"))
@@ -79,8 +79,8 @@ class Intro(QDialog, MessageBoxMixin):
         try:
             self.contract = extract_contract_data(data.get("initial_tx"))
             self.contractTx = [data.get("utxo")]
-            self.role = data.get('role')
-            assert role == 1
+            self.mode = data.get('role')
+            assert self.mode == 1
         except:
             print("No contract or wrong wallet")
             return
@@ -265,7 +265,8 @@ class UtxoList(MyTreeWidget, MessageBoxMixin):
             _('Id'),
             _('Contract expires in: '),
             _('Refresh lock: '),
-            _('Amount')], 1, deferred_updates=True)
+            _('Amount'),
+            _('My role')], None, deferred_updates=True)
         self.contracts = contracts
         self.main_window = parent
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -280,32 +281,36 @@ class UtxoList(MyTreeWidget, MessageBoxMixin):
         super().update()
 
     def get_selected_id(self):
-        return self.selectedItems()[0]
+        utxo = self.currentItem().data(0, Qt.UserRole)
+        contract = self.currentItem().data(1, Qt.UserRole)
+        return utxo, contract
 
     def on_update(self):
-        print(self.contracts[0][0])
-        if len(self.contracts) == 1 and len(self.contracts[0][0])==1:
-            x = self.contracts[0][0][0]
-            self.add_item(x, self)
+        if len(self.contracts) == 1 and len(self.contracts[0][UTXO])==1:
+            x = self.contracts[0][UTXO][0]
+            item = self.add_item(x, self, self.contracts[0])
+            self.setCurrentItem(item)
         else:
-            print("up")
             for c in self.contracts:
-                print(c[1])
-                contract = QTreeWidgetItem([c[1].address.to_ui_string(),'','',''])
-                print('up')
+                contract = QTreeWidgetItem([c[1].address.to_ui_string(),'','','',role_name(c[MODE])])
                 self.addChild(contract)
-                print(c[0][0])
-                for x in c[0]:
-                    print('up')
-                    self.add_item(x, contract)
+                for x in c[UTXO]:
+                    item = self.add_item(x, contract, c)
+                    self.setCurrentItem(item)
 
-    def add_item(self, x, parent_item):
+
+    def add_item(self, x, parent_item, c):
         expiration = self.estimate_expiration(x)
         lock = self.refresh_lock(x)
         amount = self.parent.format_amount(x.get('value'), is_diff=False, whitespaces=True)
-        txid = x['tx_hash']
-        utxo_item = SortableTreeWidgetItem([txid, expiration, lock, amount])
+        mode = role_name(c[MODE])
+        utxo_item = SortableTreeWidgetItem([x['tx_hash'][:10]+'...', expiration, lock, amount, mode])
+
+        utxo_item.setData(0, Qt.UserRole, x)
+        utxo_item.setData(1, Qt.UserRole, c)
+
         parent_item.addChild(utxo_item)
+        return utxo_item
 
 
     def get_age(self, entry):
@@ -336,7 +341,7 @@ class UtxoList(MyTreeWidget, MessageBoxMixin):
         elif (7-age) > 0:
             label = str(8-age) + _(" days" )
         else :
-            label = _("You can refresh")
+            label = _("Ready for refreshing")
         return label
 
 
@@ -354,14 +359,10 @@ class Manage(QDialog, MessageBoxMixin):
         vbox = QVBoxLayout()
         self.setLayout(vbox)
         self.fee=1000
-
-        self.mode_label = QLabel()
-
         self.utxoList = UtxoList(self.main_window,self.manager.contracts)
         self.utxoList.on_update()
         vbox.addWidget(self.utxoList)
         if self.manager.mode==0:
-            self.mode_label.setText(_("<b>%s</b>" % (_("This is refreshing wallet."))))
             b = QPushButton(_("Refresh"))
             b.clicked.connect(self.refresh)
             self.notification = NotificationWidget(self)
@@ -369,7 +370,6 @@ class Manage(QDialog, MessageBoxMixin):
             vbox.addStretch(1)
             vbox.addWidget(b)
         elif self.manager.mode==1:
-            self.mode_label.setText(_("<b>%s</b>" % (_("This is cold wallet."))))
             b = QPushButton(_("Export contract info"))
             b.clicked.connect(self.export)
             vbox.addWidget(b)
@@ -377,12 +377,12 @@ class Manage(QDialog, MessageBoxMixin):
             b.clicked.connect(self.end)
             vbox.addWidget(b)
         else:
-            self.mode_label.setText(_("<b>%s</b>" % (_("This is inheritors wallet."))))
             b = QPushButton(_("Inherit"))
             b.clicked.connect(self.end)
             vbox.addWidget(b)
 
     def end(self):
+        self.manager.choice(self.utxoList.get_selected_id())
         inputs = [self.manager.txin]
         outputs = [(TYPE_ADDRESS, self.manager.contract.addresses[self.manager.mode], self.manager.value - self.fee)]
         tx = Transaction.from_io(inputs, outputs, locktime=0)
@@ -394,6 +394,7 @@ class Manage(QDialog, MessageBoxMixin):
         self.plugin.switch_to(Intro, self.wallet_name, None, None)
 
     def refresh(self):
+        self.manager.choice(self.utxoList.get_selected_id())
         if self.manager.mode!=0:
             print("This wallet can't refresh a contract!")
             return
@@ -429,6 +430,12 @@ class Manage(QDialog, MessageBoxMixin):
 
 
 
-
-
-
+def role_name(i):
+    if i==0:
+        return "refreshing"
+    elif i==1:
+        return "cold"
+    elif i==2:
+        return "inheritor"
+    else:
+        return "unknown role"

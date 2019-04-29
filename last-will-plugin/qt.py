@@ -98,8 +98,6 @@ class Plugin(BasePlugin):
     def refresh_ui_for_wallet(self, wallet_name):
         wallet_tab = self.lw_tabs[wallet_name]
         wallet_tab.update()
-        wallet_tab = self.lw_tab[wallet_name]
-        wallet_tab.update()
 
     def switch_to(self, mode, wallet_name, password, manager):
         window=self.wallet_windows[wallet_name]
