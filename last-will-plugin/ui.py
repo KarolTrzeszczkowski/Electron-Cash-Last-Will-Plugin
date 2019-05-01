@@ -47,9 +47,6 @@ class Intro(QDialog, MessageBoxMixin):
         l = QLabel("<b>%s</b>"%(_("Manage my Last Will:")))
         vbox.addWidget(l)
         vbox.addLayout(hbox)
-        b = QPushButton(_("Create new Last Will contract"))
-        b.clicked.connect(lambda : self.plugin.switch_to(Create, self.wallet_name, None, self.manager))
-        hbox.addWidget(b)
         b = QPushButton(_("Find existing Last Will contract"))
         b.clicked.connect(self.handle_finding)
         hbox.addWidget(b)
@@ -61,7 +58,7 @@ class Intro(QDialog, MessageBoxMixin):
     def handle_finding(self):
         try:
             self.contracts = find_contract(self.wallet)
-            time.sleep(3)
+            #time.sleep(3)
         except Exception as ex:
             print(ex)
             print("No contract")
@@ -122,9 +119,6 @@ class Intro(QDialog, MessageBoxMixin):
                 print(ex)
 
         return keypairs, public_keys
-
-
-
 
 
 class Create(QDialog, MessageBoxMixin):
@@ -271,7 +265,7 @@ class UtxoList(MyTreeWidget, MessageBoxMixin):
             _('My role')], None, deferred_updates=True)
         self.contracts = contracts
         self.main_window = parent
-        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.setSortingEnabled(True)
 
     def create_menu(self, position):
@@ -369,6 +363,9 @@ class Manage(QDialog, MessageBoxMixin):
         self.utxoList = UtxoList(self.main_window,self.manager.contracts)
         self.utxoList.on_update()
         vbox.addWidget(self.utxoList)
+        b = QPushButton(_("Create new Last Will contract"))
+        b.clicked.connect(lambda: self.plugin.switch_to(Create, self.wallet_name, None, self.manager))
+        hbox.addWidget(b)
         if self.manager.mode==0:
             b = QPushButton(_("Refresh"))
             b.clicked.connect(self.refresh)
@@ -411,25 +408,33 @@ class Manage(QDialog, MessageBoxMixin):
         self.plugin.switch_to(Intro, self.wallet_name, None, None)
 
 
-
-    # def end_tx(self, contract, index):
-        # if utxo_index>0:
-        #     yorn=self.main_window.question(_(
-        #         "End selected entry and redeem the funds to this wallet?"))
-        #     if yorn:
-        # else:
-        #     yorn = self.main_window.question(_(
-        #         "End selected contract (")  + str(len(contract[UTXO])) + _(" outputs) and redeem the funds to this wallet?"))
-        #     for u in contract[UTXO]:
-        #         tx = self.end_tx(contract,utxo_index)
-        # return tx
-
     def refresh(self):
-        contract, utxo_index = self.utxoList.get_selected_id()
-        self.manager.choice(contract, utxo_index)
         if self.manager.mode!=0:
             print("This wallet can't refresh a contract!")
             return
+        contract, utxo_index = self.utxoList.get_selected_id()
+        if utxo_index > 0:
+            self.manager.choice(contract, utxo_index)
+            yorn=self.main_window.question(_(
+                 "Do you wish to refresh the selected entry?"))
+            if yorn:
+                tx = self.ref_tx(contract,utxo_index)
+                # self.main_window.network.broadcast_transaction2(tx)
+                show_transaction(tx, self.main_window, "Refresh entry", prompt_if_unsaved=True)
+
+                # self.main_window.show_message("Done!")
+                return
+            else:
+                return
+        else:
+            yorn=self.main_window.question(_(
+                 "Do you wish to refresh the selected contract?"))
+            if yorn:
+                for i in range(len(contract[UTXO])):
+                    self.manager.choice(contract, i)
+                    tx = self.ref_tx(contract,i)
+                    # self.main_window.network.broadcast_transaction2(tx)
+                    show_transaction(tx, self.main_window, "Refresh entry", prompt_if_unsaved=True)
         print("Notification Service: ")
         print(self.notification.do_anything())
         if self.notification.do_anything() :
@@ -437,17 +442,19 @@ class Manage(QDialog, MessageBoxMixin):
             tx = self.wallet.mktx(outputs, self.password, self.config, None, None)
             show_transaction(tx, self.main_window, "Notification service payment", prompt_if_unsaved=True)
 
-        inputs = [self.manager.txin]
-        outputs = [(TYPE_ADDRESS, self.manager.contract.address, self.manager.value-self.fee)]
+        #show_transaction(tx, self.main_window, "Refresh Last Will contract", prompt_if_unsaved=True)
+        self.plugin.switch_to(Intro, self.wallet_name,None,None)
+
+    def ref_tx(self, contract, utxo_index):
+        self.manager.choice(contract, utxo_index)
+        inputs = self.manager.txin
+        outputs = [(TYPE_ADDRESS, self.manager.contract.address, self.manager.value - self.fee)]
         tx = Transaction.from_io(inputs, outputs, locktime=0)
         tx.version = 2
         self.manager.signtx(tx)
         self.wallet.sign_transaction(tx, self.password)
         self.manager.completetx_ref(tx)
-        show_transaction(tx, self.main_window, "Refresh Last Will contract", prompt_if_unsaved=True)
-
-        self.plugin.switch_to(Intro, self.wallet_name,None,None)
-
+        return tx
 
     def export(self):
         name = "Last_Will_Contract_Info_"+ time.strftime("%b%d%Y",time.localtime(time.time())) +".json"
