@@ -89,8 +89,8 @@ class Intro(QDialog, MessageBoxMixin):
 
     def start_manager(self):
         try:
-            keypairs = self.get_keypairs_for_contracts(self.contracts)
-            self.manager = LastWillContractManager(self.contracts, keypairs, self.wallet)
+            keypairs, public_keys = self.get_keypairs_for_contracts(self.contracts)
+            self.manager = LastWillContractManager(self.contracts, keypairs,public_keys, self.wallet)
             self.plugin.switch_to(Manage, self.wallet_name, self.password, self.manager)
         except Exception as es:
             print(es)
@@ -104,7 +104,8 @@ class Intro(QDialog, MessageBoxMixin):
             self.password = self.main_window.password_dialog()
             if not self.password:
                 return
-        keypairs = OrderedDict()
+        keypairs = dict()
+        public_keys=[]
         for c in contracts:
             myAddress=c[1].addresses[c[2]]
             i = self.wallet.get_address_index(myAddress)
@@ -115,11 +116,12 @@ class Intro(QDialog, MessageBoxMixin):
                 priv = None
             try:
                 public = self.wallet.get_public_keys(myAddress)
+                public_keys.append(public[0])
                 keypairs[public[0]] = (priv, True)
             except Exception as ex:
                 print(ex)
 
-        return keypairs
+        return keypairs, public_keys
 
 
 
@@ -389,15 +391,38 @@ class Manage(QDialog, MessageBoxMixin):
     def end(self):
         contract, utxo_index = self.utxoList.get_selected_id()
         self.manager.choice(contract, utxo_index)
-        inputs = [self.manager.txin]
-        outputs = [(TYPE_ADDRESS, self.manager.contract.addresses[self.manager.mode], self.manager.value - self.fee)]
+        inputs = self.manager.txin
+        # Mark style fee estimation
+        outputs = [
+            (TYPE_ADDRESS, self.manager.contract.addresses[self.manager.mode], self.manager.value)]
         tx = Transaction.from_io(inputs, outputs, locktime=0)
-        tx.version=2
+        tx.version = 2
+        fee = len(tx.serialize(True)) // 2
+        print("fee")
+        print(fee)
+        outputs = [
+            (TYPE_ADDRESS, self.manager.contract.addresses[self.manager.mode], self.manager.value-fee)]
+        tx = Transaction.from_io(inputs, outputs, locktime=0)
+        tx.version = 2
         if not self.wallet.is_watching_only():
             self.manager.signtx(tx)
             self.manager.completetx(tx)
         show_transaction(tx, self.main_window, "End Last Will contract", prompt_if_unsaved=True)
         self.plugin.switch_to(Intro, self.wallet_name, None, None)
+
+
+
+    # def end_tx(self, contract, index):
+        # if utxo_index>0:
+        #     yorn=self.main_window.question(_(
+        #         "End selected entry and redeem the funds to this wallet?"))
+        #     if yorn:
+        # else:
+        #     yorn = self.main_window.question(_(
+        #         "End selected contract (")  + str(len(contract[UTXO])) + _(" outputs) and redeem the funds to this wallet?"))
+        #     for u in contract[UTXO]:
+        #         tx = self.end_tx(contract,utxo_index)
+        # return tx
 
     def refresh(self):
         contract, utxo_index = self.utxoList.get_selected_id()

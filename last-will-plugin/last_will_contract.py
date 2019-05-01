@@ -74,18 +74,16 @@ class LastWillContract:
 
 class LastWillContractManager:
     """A device that spends the Last Will in three different ways."""
-    def __init__(self, contracts, keypairs, wallet):
+    def __init__(self, contracts, keypairs, public_keys, wallet):
         self.contracts = contracts
         self.contract_index=0
         self.tx = contracts[self.contract_index][0][UTXO]
         self.contract = contracts[self.contract_index][CONTRACT]
         self.mode = contracts[self.contract_index][MODE]
-        self.keypair = dict(keypairs)
-        self.pubkeys = list(keypairs)
+        self.keypair = keypairs
+        self.pubkeys = public_keys
         self.wallet = wallet
-
-        self.dummy_scriptsig = '00'*(74 + len(self.contract.redeemscript))
-
+        self.dummy_scriptsig = '00'*(110 + len(self.contract.redeemscript))
         if self.mode == 0:
             self.sequence=2**22+self.contract.time2
         elif self.mode == 2:
@@ -93,31 +91,55 @@ class LastWillContractManager:
         else:
             self.sequence = 0
         self.value = int(self.tx.get('value'))
-
         self.txin = dict()
 
-    def choice(self, contract, utxo_index = 0):
-        if utxo_index==-1:
-            print("Selected a contract")
-        utxo=contract[UTXO][utxo_index]
+    def choice(self, contract, utxo_index):
+        self.value=0
+        self.txin=[]
+
+        self.contract = contract[CONTRACT]
         self.contract_index = self.contracts.index(contract)
-        print(self.contract_index)
-        self.value = int(utxo.get('value'))
-        print("pubkey: ")
-        print(self.pubkeys[self.contract_index])
-        self.txin = dict(
-            prevout_hash=utxo.get('tx_hash'),
-            prevout_n=int(utxo.get('tx_pos')),
-            sequence=self.sequence,
-            scriptSig=self.dummy_scriptsig,
-            type='unknown',
-            address=self.contract.address,
-            scriptCode=self.contract.redeemscript.hex(),
-            num_sig=1,
-            signatures=[None],
-            x_pubkeys=[self.pubkeys[self.contract_index]],
-            value=self.value,
-        )
+        self.mode = contract[MODE]
+        if self.mode == 0:
+            self.sequence=2**22+self.contract.time2
+        elif self.mode == 2:
+            self.sequence=2**22+self.contract.time1
+        else:
+            self.sequence = 0
+        utxo = contract[UTXO][utxo_index]
+        if (utxo_index == -1) and (self.mode != 0):
+            print("Selected a contract")
+            for u in contract[UTXO]:
+                self.value += int(u.get('value'))
+                self.txin.append( dict(
+                    prevout_hash=u.get('tx_hash'),
+                    prevout_n=int(u.get('tx_pos')),
+                    sequence=self.sequence,
+                    scriptSig=self.dummy_scriptsig,
+                    type='unknown',
+                    address=self.contract.address,
+                    scriptCode=self.contract.redeemscript.hex(),
+                    num_sig=1,
+                    signatures=[None],
+                    x_pubkeys=[self.pubkeys[self.contract_index]],
+                    value=int(u.get('value')),
+                ))
+        else:
+            print("selected utxo")
+            self.value = int(utxo.get('value'))
+            self.txin = [dict(
+                prevout_hash=utxo.get('tx_hash'),
+                prevout_n=int(utxo.get('tx_pos')),
+                sequence=self.sequence,
+                scriptSig=self.dummy_scriptsig,
+                type='unknown',
+                address=self.contract.address,
+                scriptCode=self.contract.redeemscript.hex(),
+                num_sig=1,
+                signatures=[None],
+                x_pubkeys=[self.pubkeys[self.contract_index]],
+                value=int(utxo.get('value')),
+            )]
 
 
     def signtx(self, tx):
@@ -151,7 +173,7 @@ class LastWillContractManager:
                     option, 76, len(self.contract.redeemscript), self.contract.redeemscript,
                     ]
                 print("scriptSig length " + str(joinbytes(script).hex().__sizeof__()))
-            txin['scriptSig'] = joinbytes(script).hex()
+                txin['scriptSig'] = joinbytes(script).hex()
         # need to update the raw, otherwise weird stuff happens.
         tx.raw = tx.serialize()
 
@@ -194,7 +216,7 @@ class LastWillContractManager:
                     Op.OP_1, 76, len(self.contract.redeemscript), self.contract.redeemscript,
                     ]
                 print("scriptSig length "+ str(joinbytes(script).hex().__sizeof__()))
-            txin['scriptSig'] = joinbytes(script).hex()
+                txin['scriptSig'] = joinbytes(script).hex()
         # need to update the raw, otherwise weird stuff happens.
         tx.raw = tx.serialize()
 
