@@ -252,6 +252,7 @@ class Create(QDialog, MessageBoxMixin):
 
 
 class contractTree(MyTreeWidget, MessageBoxMixin):
+
     def __init__(self, parent, contracts):
         MyTreeWidget.__init__(self, parent, self.create_menu,[
             _('Id'),
@@ -423,7 +424,7 @@ class Manage(QDialog, MessageBoxMixin):
             self.manager.signtx(tx)
             self.manager.completetx(tx)
         show_transaction(tx, self.main_window, "End Last Will contract", prompt_if_unsaved=True)
-        # self.plugin.switch_to(Intro, self.wallet_name, None, None)
+        self.plugin.switch_to(Manage, self.wallet_name, None, None)
 
 
     def refresh(self):
@@ -460,7 +461,7 @@ class Manage(QDialog, MessageBoxMixin):
             show_transaction(tx, self.main_window, "Notification service payment", prompt_if_unsaved=True)
 
         #show_transaction(tx, self.main_window, "Refresh Last Will contract", prompt_if_unsaved=True)
-        #self.plugin.switch_to(Intro, self.wallet_name,None,None)
+        self.plugin.switch_to(Manage, self.wallet_name,None,None)
 
     def ref_tx(self, contract, utxo_index, m):
         self.manager.choice(contract, utxo_index, m)
