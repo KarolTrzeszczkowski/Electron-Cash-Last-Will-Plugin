@@ -18,8 +18,8 @@ class LastWillContract:
     """Contract of last will, that is timelocked for inheritor unless the creator refresh it
     from the hot wallet or spend from the cold wallet."""
 
-    def __init__(self, addresses):
-
+    def __init__(self, addresses, initial_tx=None):
+        self.initial_tx=initial_tx
         self.time1 = (180*3600*24)//512
         self.time_bytes = (self.time1).to_bytes(2,'little')
         self.time2= (7*3600*24)//512
@@ -77,9 +77,10 @@ class LastWillContractManager:
     def __init__(self, contracts, keypairs, public_keys, wallet):
         self.contracts = contracts
         self.contract_index=0
+        self.chosen_utxo = 0
         self.tx = contracts[self.contract_index][0][UTXO]
         self.contract = contracts[self.contract_index][CONTRACT]
-        self.mode = contracts[self.contract_index][MODE]
+        self.mode = contracts[self.contract_index][MODE][0]
         self.keypair = keypairs
         self.pubkeys = public_keys
         self.wallet = wallet
@@ -93,13 +94,13 @@ class LastWillContractManager:
         self.value = int(self.tx.get('value'))
         self.txin = dict()
 
-    def choice(self, contract, utxo_index):
+    def choice(self, contract, utxo_index, m):
         self.value=0
         self.txin=[]
-
+        self.chosen_utxo=utxo_index
         self.contract = contract[CONTRACT]
         self.contract_index = self.contracts.index(contract)
-        self.mode = contract[MODE]
+        self.mode = m
         if self.mode == 0:
             self.sequence=2**22+self.contract.time2
         elif self.mode == 2:
@@ -108,7 +109,6 @@ class LastWillContractManager:
             self.sequence = 0
         utxo = contract[UTXO][utxo_index]
         if (utxo_index == -1) and (self.mode != 0):
-            print("Selected a contract")
             for u in contract[UTXO]:
                 self.value += int(u.get('value'))
                 self.txin.append( dict(
