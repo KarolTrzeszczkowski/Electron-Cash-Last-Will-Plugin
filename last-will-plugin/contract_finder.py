@@ -46,7 +46,6 @@ def extract_contract_data(wallet, tx, utxo):
     return contracts
 
 def remove_duplicates(contracts):
-    print("checking for duplicates")
     for c1, c2 in combinations(contracts,2):
         if c1[1].address == c2[1].address:
             contracts = contracts.remove(c1)

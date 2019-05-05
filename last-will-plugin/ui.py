@@ -44,7 +44,11 @@ class Intro(QDialog, MessageBoxMixin):
             vbox.addWidget(l)
         l = QLabel("<b>%s</b>"%(_("Manage my Last Will:")))
         vbox.addWidget(l)
+
         vbox.addLayout(hbox)
+        b = QPushButton(_("Create new Last Will contract"))
+        b.clicked.connect(lambda: self.plugin.switch_to(Create, self.wallet_name, None, self.manager))
+        hbox.addWidget(b)
         b = QPushButton(_("Find existing Last Will contract"))
         b.clicked.connect(self.handle_finding)
         hbox.addWidget(b)
@@ -54,14 +58,11 @@ class Intro(QDialog, MessageBoxMixin):
         vbox.addStretch(1)
 
     def handle_finding(self):
-        try:
-            self.contracts = find_contract(self.wallet)
-            # time.sleep(3)
-        except Exception as ex:
-            print(ex)
-            print("No contract")
-        else:
+        self.contracts = find_contract(self.wallet)
+        if len(self.contracts):
             self.start_manager()
+        else:
+            self.show_error("You are not a party in any contract yet.")
 
     def load(self):
         fileName = self.main_window.getOpenFileName("Load Last Will Contract Info", "*.json")
@@ -121,6 +122,7 @@ class Create(QDialog, MessageBoxMixin):
 
     def __init__(self, parent, plugin, wallet_name, password, manager):
         QDialog.__init__(self, parent)
+        print("Creating")
         self.main_window = parent
         self.wallet=parent.wallet
         self.plugin = plugin
@@ -151,10 +153,18 @@ class Create(QDialog, MessageBoxMixin):
 
         vbox = QVBoxLayout()
         self.setLayout(vbox)
+        hbox = QHBoxLayout()
+        vbox.addLayout(hbox)
         l = QLabel("<b>%s</b>" % (_("Creatin Last Will contract:")))
+        hbox.addWidget(l)
+        hbox.addStretch(1)
+        b = QPushButton(_("Home"))
+        b.clicked.connect(lambda: self.plugin.switch_to(Intro, self.wallet_name, None, None))
+        hbox.addWidget(b)
+        l = QLabel(_("Refreshing address") + ": auto (this wallet)")  # self.refreshing_address.to_ui_string())
         vbox.addWidget(l)
-        l = QLabel(_("Refreshing address") + ": auto (this wallet)") #self.refreshing_address.to_ui_string())
-        vbox.addWidget(l)
+
+
 
         grid = QGridLayout()
         vbox.addLayout(grid)
@@ -286,12 +296,12 @@ class contractTree(MyTreeWidget, MessageBoxMixin):
     def on_update(self):
         if len(self.contracts) == 1 and len(self.contracts[0][UTXO])==1:
             x = self.contracts[0][UTXO][0]
-            item = self.add_item(x, self, self.contracts[0])
+            item = self.add_item(x, self, self.contracts[0],self.contracts[0][MODE][0])
             self.setCurrentItem(item)
         else:
             for c in self.contracts:
                 for m in c[MODE]:
-                    contract = QTreeWidgetItem([c[1].address.to_ui_string(),'','','',role_name(m)])
+                    contract = QTreeWidgetItem([c[CONTRACT].address.to_ui_string(),'','','',role_name(m)])
                     contract.setData(1, Qt.UserRole, c)
                     contract.setData(2,Qt.UserRole, m)
                     self.addChild(contract)
@@ -301,46 +311,50 @@ class contractTree(MyTreeWidget, MessageBoxMixin):
 
 
     def add_item(self, x, parent_item, c, m):
-        expiration = self.estimate_expiration(x)
-        lock = self.refresh_lock(x)
+        expiration = self.estimate_expiration(x,c)
+        lock = self.refresh_lock(x,c)
         amount = self.parent.format_amount(x.get('value'), is_diff=False, whitespaces=True)
         mode = role_name(m)
         utxo_item = SortableTreeWidgetItem([x['tx_hash'][:10]+'...', expiration, lock, amount, mode])
-
         utxo_item.setData(0, Qt.UserRole, x)
         utxo_item.setData(1, Qt.UserRole, c)
         utxo_item.setData(2, Qt.UserRole, m)
         parent_item.addChild(utxo_item)
+
         return utxo_item
 
 
     def get_age(self, entry):
         txHeight = entry.get("height")
         currentHeight=self.main_window.network.get_local_height()
-        age = ceil((currentHeight-txHeight)/144)
+        age = (currentHeight-txHeight)//6
         return age
 
-    def estimate_expiration(self, entry):
+    def estimate_expiration(self, entry, contr):
         """estimates age of the utxo in days. There are 144 blocks per day on average"""
         txHeight = entry.get("height")
         age = self.get_age(entry)
+        contract_i_time=ceil((contr[CONTRACT].i_time*512)/(3600))
+        print("age, contract itime")
+        print(age, contract_i_time)
         if txHeight==0 :
             label = _("Waiting for confirmation.")
-        elif (180-age) > 0:
-            label = str(180-age) +" days"
+        elif (contract_i_time-age) >= 0:
+            label = '{0:.2f}'.format((contract_i_time - age)/24) +" days"
         else :
             label = _("Last Will is ready to be inherited.")
         return label
 
-    def refresh_lock(self,entry):
+    def refresh_lock(self,entry, contr):
         """Contract can be refreshed only when it's one week old"""
         txHeight = entry.get("height")
-        age = self.get_age(entry)
+        age = int(self.get_age(entry))
+        contract_rl_time = ceil((contr[CONTRACT].rl_time*512)/3600)
         # print("Age: " +str(age) + " Height: "+str(txHeight))
         if txHeight==0 :
-            label = str(7) + _(" days")
-        elif (7-age) > 0:
-            label = str(8-age) + _(" days" )
+            label = str(contract_rl_time) + _(" h")
+        elif (contract_rl_time - age) >= 0:
+            label = str(contract_rl_time-age) + _(" h" )
         else :
             label = _("Ready for refreshing")
         return label
@@ -361,20 +375,20 @@ class Manage(QDialog, MessageBoxMixin):
         self.setLayout(vbox)
         self.fee=1000
         self.contract_tree = contractTree(self.main_window, self.manager.contracts)
-
-
         self.contract_tree.on_update()
         vbox.addWidget(self.contract_tree)
         hbox = QHBoxLayout()
         hbox.addStretch(1)
         vbox.addLayout(hbox)
+        b = QPushButton(_("Home"))
+        b.clicked.connect(lambda: self.plugin.switch_to(Intro, self.wallet_name, None, None))
+        hbox.addWidget(b)
         b = QPushButton(_("Create new Last Will contract"))
         b.clicked.connect(lambda: self.plugin.switch_to(Create, self.wallet_name, None, self.manager))
         hbox.addWidget(b)
         b = QPushButton(_("Export"))
         b.clicked.connect(self.export)
         hbox.addWidget(b)
-
         self.refresh_label = _("Refresh")
         self.inherit_label = _("Inherit")
         self.end_label = _("End")
@@ -386,6 +400,7 @@ class Manage(QDialog, MessageBoxMixin):
         vbox.addWidget(self.button)
         self.contract_tree.currentItemChanged.connect(self.update_button)
         self.update_button()
+
 
 
     def update_button(self):

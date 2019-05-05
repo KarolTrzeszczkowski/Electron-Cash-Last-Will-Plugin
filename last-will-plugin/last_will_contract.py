@@ -9,6 +9,10 @@ LOCKTIME_THRESHOLD = 500000000
 UTXO=0
 CONTRACT=1
 MODE=2
+INHERITACNE_TIME=int((0.5*3600*24))
+REFRESH_LOCK_TIME=int(((2/24)*3600*24))
+
+
 def joinbytes(iterable):
     """Joins an iterable of bytes and/or integers into a single byte string"""
     return b''.join((bytes((x,)) if isinstance(x,int) else x) for x in iterable)
@@ -20,14 +24,14 @@ class LastWillContract:
 
     def __init__(self, addresses, initial_tx=None):
         self.initial_tx=initial_tx
-        self.time1 = (180*3600*24)//512
-        self.time_bytes = (self.time1).to_bytes(2,'little')
-        self.time2= (7*3600*24)//512
-        self.time2_bytes = (self.time2).to_bytes(2,'little')
+        self.i_time = INHERITACNE_TIME // 512
+        self.i_time_bytes = (self.i_time).to_bytes(2, 'little')
+        self.rl_time= REFRESH_LOCK_TIME // 512
+        self.rl_time_bytes = (self.rl_time).to_bytes(2, 'little')
         self.addresses=addresses
 
-        assert len(self.time2_bytes)==2
-        assert len(self.time_bytes)==2
+        assert len(self.rl_time_bytes) == 2
+        assert len(self.i_time_bytes) == 2
 
 
         self.redeemscript = joinbytes([
@@ -42,7 +46,7 @@ class LastWillContract:
                 Op.OP_CAT, Op.OP_5, Op.OP_PICK, Op.OP_CAT, Op.OP_12, Op.OP_PICK, Op.OP_SIZE, Op.OP_1SUB, Op.OP_SPLIT,
                 Op.OP_DROP, Op.OP_OVER, Op.OP_SHA256, Op.OP_15, Op.OP_PICK, Op.OP_CHECKDATASIGVERIFY, 2, 232, 3, Op.OP_9,
                 Op.OP_PICK, Op.OP_BIN2NUM, Op.OP_OVER, Op.OP_SUB, Op.OP_8, Op.OP_NUM2BIN, 1, 135, 1, 169, 1, 20, 1, 23,
-                Op.OP_15, Op.OP_PICK, Op.OP_TRUE, Op.OP_SPLIT, Op.OP_NIP, 3, self.time2_bytes, 64, Op.OP_CHECKSEQUENCEVERIFY,
+                Op.OP_15, Op.OP_PICK, Op.OP_TRUE, Op.OP_SPLIT, Op.OP_NIP, 3, self.rl_time_bytes, 64, Op.OP_CHECKSEQUENCEVERIFY,
                 Op.OP_DROP, 1, 18, Op.OP_PICK, Op.OP_BIN2NUM, Op.OP_2, Op.OP_GREATERTHANOREQUAL, Op.OP_VERIFY, Op.OP_5,
                 Op.OP_PICK, Op.OP_2, Op.OP_PICK, Op.OP_CAT, Op.OP_4, Op.OP_PICK, Op.OP_CAT, Op.OP_3, Op.OP_PICK, Op.OP_CAT,
                 Op.OP_OVER, Op.OP_HASH160, Op.OP_CAT, Op.OP_5, Op.OP_PICK, Op.OP_CAT, Op.OP_HASH256, Op.OP_14, Op.OP_PICK,
@@ -57,7 +61,7 @@ class LastWillContract:
                 Op.OP_ELSE,
                     Op.OP_3, Op.OP_PICK, Op.OP_3, Op.OP_EQUAL,
                     Op.OP_IF,
-                        3, self.time_bytes, 64, Op.OP_CHECKSEQUENCEVERIFY, Op.OP_DROP, Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_OVER,
+                        3, self.i_time_bytes, 64, Op.OP_CHECKSEQUENCEVERIFY, Op.OP_DROP, Op.OP_5, Op.OP_PICK, Op.OP_HASH160, Op.OP_OVER,
                         Op.OP_EQUALVERIFY, Op.OP_4, Op.OP_PICK, Op.OP_6, Op.OP_PICK, Op.OP_CHECKSIG, Op.OP_NIP, Op.OP_NIP,
                         Op.OP_NIP, Op.OP_NIP, Op.OP_NIP, Op.OP_NIP,
                     Op.OP_ELSE,
@@ -86,9 +90,9 @@ class LastWillContractManager:
         self.wallet = wallet
         self.dummy_scriptsig = '00'*(110 + len(self.contract.redeemscript))
         if self.mode == 0:
-            self.sequence=2**22+self.contract.time2
+            self.sequence=2**22+self.contract.i_time
         elif self.mode == 2:
-            self.sequence=2**22+self.contract.time1
+            self.sequence=2**22+self.contract.rl_time
         else:
             self.sequence = 0
         self.value = int(self.tx.get('value'))
@@ -102,9 +106,9 @@ class LastWillContractManager:
         self.contract_index = self.contracts.index(contract)
         self.mode = m
         if self.mode == 0:
-            self.sequence=2**22+self.contract.time2
+            self.sequence=2**22+self.contract.rl_time
         elif self.mode == 2:
-            self.sequence=2**22+self.contract.time1
+            self.sequence=2**22+self.contract.i_time
         else:
             self.sequence = 0
         utxo = contract[UTXO][utxo_index]
@@ -125,7 +129,6 @@ class LastWillContractManager:
                     value=int(u.get('value')),
                 ))
         else:
-            print("selected utxo")
             self.value = int(utxo.get('value'))
             self.txin = [dict(
                 prevout_hash=utxo.get('tx_hash'),
