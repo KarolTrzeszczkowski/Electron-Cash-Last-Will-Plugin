@@ -433,6 +433,9 @@ class Manage(QDialog, MessageBoxMixin):
         tx = Transaction.from_io(inputs, outputs, locktime=0)
         tx.version = 2
         fee = len(tx.serialize(True)) // 2
+        if fee > self.manager.value:
+            self.show_error("Not enough funds to make the transaction!")
+            return
         outputs = [
             (TYPE_ADDRESS, self.manager.contract.addresses[self.manager.mode], self.manager.value-fee)]
         tx = Transaction.from_io(inputs, outputs, locktime=0)
