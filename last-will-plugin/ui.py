@@ -100,6 +100,7 @@ class Intro(QDialog, MessageBoxMixin):
         keypairs = dict()
         public_keys=[]
         for c in contracts:
+            public_keys.append(dict())
             for m in c[MODE]:
                 myAddress=c[CONTRACT].addresses[m]
                 i = self.wallet.get_address_index(myAddress)
@@ -110,7 +111,8 @@ class Intro(QDialog, MessageBoxMixin):
                     priv = None
                 try:
                     public = self.wallet.get_public_keys(myAddress)
-                    public_keys.append(public[0])
+
+                    public_keys[contracts.index(c)][m]=public[0]
                     keypairs[public[0]] = priv
                 except Exception as ex:
                     print(ex)

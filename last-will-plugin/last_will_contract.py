@@ -125,7 +125,7 @@ class LastWillContractManager:
                     scriptCode=self.contract.redeemscript.hex(),
                     num_sig=1,
                     signatures=[None],
-                    x_pubkeys=[self.pubkeys[self.contract_index]],
+                    x_pubkeys=[self.pubkeys[self.contract_index][self.mode]],
                     value=int(u.get('value')),
                 ))
         else:
@@ -140,7 +140,7 @@ class LastWillContractManager:
                 scriptCode=self.contract.redeemscript.hex(),
                 num_sig=1,
                 signatures=[None],
-                x_pubkeys=[self.pubkeys[self.contract_index]],
+                x_pubkeys=[self.pubkeys[self.contract_index][self.mode]],
                 value=int(utxo.get('value')),
             )]
 
@@ -160,7 +160,7 @@ class LastWillContractManager:
             option = Op.OP_2
         else :
             option = Op.OP_3
-        pub = bytes.fromhex(self.pubkeys[self.contract_index])
+        pub = bytes.fromhex(self.pubkeys[self.contract_index][self.mode])
         for txin in tx.inputs():
             # find matching inputs
             if txin['address'] != self.contract.address:
@@ -182,7 +182,7 @@ class LastWillContractManager:
 
     def completetx_ref(self, tx):
 
-        pub = bytes.fromhex(self.pubkeys[self.contract_index])
+        pub = bytes.fromhex(self.pubkeys[self.contract_index][self.mode])
 
         for i, txin in enumerate(tx.inputs()):
             # find matching inputs
@@ -195,7 +195,7 @@ class LastWillContractManager:
             sig = bytes.fromhex(sig)
             print("Signature size:" + str(len(sig)))
             if txin['scriptSig'] == self.dummy_scriptsig:
-                self.checkd_data_sig(sig, preimage, self.pubkeys[self.contract_index])
+                self.checkd_data_sig(sig, preimage, self.pubkeys[self.contract_index][self.mode])
 
                 ver=preimage[:4]
                 hPhSo=preimage[4:104]
