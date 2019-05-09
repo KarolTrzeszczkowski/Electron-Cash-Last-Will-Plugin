@@ -142,7 +142,11 @@ This software is distributed on GPL v3 license. The author encourage you to buil
 
 I want to thank **Mark Lundeberg** for solving the vast majority of my problems. I would never get this to work if he wasn't there to help me. I based on his work a lot. The Last Will plugin is a ship of theseus<sup>[3](https://en.wikipedia.org/wiki/Ship_of_Theseus)</sup> [coinsplitter](https://github.com/KarolTrzeszczkowski/Coinsplitter-Plugin) that I modified until it stopped to quack like a duck.<sup>[4](https://en.wikipedia.org/wiki/Duck_test)</sup>
 
-I also want to thank to **Pein_Sama** for help with spedn and the creation of the entire idea of looping transactions in his [famous article](https://honest.cash/pein_sama/spending-constraints-with-op_checkdatasig-172).
+I also want to thank to **Pein_Sama** for help with spedn and his [famous article](https://honest.cash/pein_sama/spending-constraints-with-op_checkdatasig-172).
+
+I also want to credit **Tobias Ruck** for his idea of looping transactions.
+
+Covenants were invented Malte M ̈oser et al. [whitepaper](https://fc16.ifca.ai/bitcoin/papers/MES16.pdf)
 
 ## Donations
 
