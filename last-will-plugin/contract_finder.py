@@ -1,10 +1,13 @@
+
 from .last_will_contract import LastWillContract
 from electroncash.address import Address, ScriptOutput
-from itertools import permutations
+from itertools import permutations, combinations
 from electroncash.transaction import Transaction
+from collections import OrderedDict
 
 
-def find_contract(wallet,a = 'network'):
+
+def find_contract(wallet):
     """Searching transactions for the one maching contract
     by creating contracts from outputs"""
     contracts=[]
@@ -15,26 +18,39 @@ def find_contract(wallet,a = 'network'):
             address = get_contract_address(out)
             candidates = get_candidates(out)
             for c in candidates:
-                will = LastWillContract(c)
+                will = LastWillContract(c,t.as_dict())
                 if will.address.to_ui_string()==address:
                         response = wallet.network.synchronous_get(
                             ("blockchain.scripthash.listunspent", [will.address.to_scripthash_hex()]))
                         if unfunded_contract(response) : #skip unfunded and ended contracts
                             continue
-                        if a == 'network':
-                            contracts.append(( response, will, find_my_role(c, wallet)))
-                        else:
-                            contracts.append(t.as_dict())
+                        contracts.append(( response, will, find_my_role(c, wallet)))
+    remove_duplicates(contracts)
     return contracts
 
-def extract_contract_data(tx):
-    transaction=Transaction(tx)
-    address = get_contract_address(transaction.outputs())
-    candidates = get_candidates(transaction.outputs())
-    for c in candidates:
-        will = LastWillContract(c)
-        if will.address.to_ui_string()==address:
-            return will
+
+
+
+
+def extract_contract_data(wallet, tx, utxo):
+    contracts=[]
+    print(tx)
+    for i in range(len(tx)):
+        transaction=Transaction(tx[i])
+        address = get_contract_address(transaction.outputs())
+        candidates = get_candidates(transaction.outputs())
+        for c in candidates:
+            will = LastWillContract(c, tx[i])
+            if will.address.to_ui_string()==address:
+                contracts.append((utxo[i], will, find_my_role(c, wallet)))
+    remove_duplicates(contracts)
+    return contracts
+
+def remove_duplicates(contracts):
+    for c1, c2 in combinations(contracts,2):
+        if c1[1].address == c2[1].address:
+            contracts = contracts.remove(c1)
+    return contracts
 
 def unfunded_contract(r):
     """Checks if the contract is funded"""
@@ -70,7 +86,14 @@ def get_candidates(outputs):
 def find_my_role(candidates, wallet):
     """Returns my role in this contract. 1 if this is refreshing wallet,
     2 if cold and 3 if it's inheritors wallet"""
+    roles=[]
     for counter, a in enumerate(candidates, start=0):
         if wallet.is_mine(a):
-            return counter
+            roles.append(counter)
+    if len(roles):
+        return roles
+
+
+
+
 

@@ -40,7 +40,6 @@ class NotificationWidget(QWidget):
         self.disabled=True
 
     def do_anything(self):
-        print((not self.disabled) and (self.notify_me.isChecked() or self.notify_inheritor.isChecked()))
         return (not self.disabled) and (self.notify_me.isChecked() or self.notify_inheritor.isChecked())
 
 
