@@ -73,6 +73,7 @@ class Intro(QDialog, MessageBoxMixin):
             return
         data = json.loads(file_content)
         try:
+            print("load")
             self.contracts = extract_contract_data(self.wallet,data.get("initial_tx"), data.get("utxo"))
         except:
             print("No contract or wrong wallet")
@@ -458,9 +459,9 @@ class Manage(QDialog, MessageBoxMixin):
                  "Do you wish to refresh the selected entry?"))
             if yorn:
                 tx = self.ref_tx(contract,utxo_index, m)
-                # self.main_window.network.broadcast_transaction2(tx)
-                show_transaction(tx, self.main_window, "Refresh entry", prompt_if_unsaved=True)
-                # self.main_window.show_message("Done!")
+                if tx:
+                    # self.main_window.network.broadcast_transaction2(tx)
+                    show_transaction(tx, self.main_window, "Refresh entry", prompt_if_unsaved=True)
                 return
             else:
                 return
@@ -471,8 +472,9 @@ class Manage(QDialog, MessageBoxMixin):
                 for i in range(len(contract[UTXO])):
                     self.manager.choice(contract, i, m)
                     tx = self.ref_tx(contract,i, m)
-                    # self.main_window.network.broadcast_transaction2(tx)
-                    show_transaction(tx, self.main_window, "Refresh entry", prompt_if_unsaved=True)
+                    if tx:
+                        # self.main_window.network.broadcast_transaction2(tx)
+                        show_transaction(tx, self.main_window, "Refresh entry", prompt_if_unsaved=True)
         print("Notification Service: ")
         print(self.notification.do_anything())
         if self.notification.do_anything() :
@@ -486,6 +488,9 @@ class Manage(QDialog, MessageBoxMixin):
     def ref_tx(self, contract, utxo_index, m):
         self.manager.choice(contract, utxo_index, m)
         inputs = self.manager.txin
+        if self.manager.value - self.fee < 0:
+            self.show_error("Not enough funds to make the transaction!")
+            return
         outputs = [(TYPE_ADDRESS, self.manager.contract.address, self.manager.value - self.fee)]
         tx = Transaction.from_io(inputs, outputs, locktime=0)
         tx.version = 2
@@ -496,11 +501,14 @@ class Manage(QDialog, MessageBoxMixin):
 
     def export(self):
         name = "Last_Will_Contract_Info_"+ time.strftime("%b%d%Y",time.localtime(time.time())) +".json"
-        fileName = self.main_window.getSaveFileName(_("Select where to save your contract info"), name, "*.txn")
         contracts=find_contract(self.wallet)
         t = [c[CONTRACT].initial_tx for c in contracts]
         utxo = [c[UTXO] for c in contracts]
         mycontract = {'utxo' : utxo, 'initial_tx' : t}
+        if mycontract['utxo']==[]:
+            self.show_message(_("No contract to save."))
+            return
+        fileName = self.main_window.getSaveFileName(_("Select where to save your contract info"), name, "*.txn")
         if fileName:
             with open(fileName, "w+") as f:
                 j = json.dumps(mycontract, indent=4)

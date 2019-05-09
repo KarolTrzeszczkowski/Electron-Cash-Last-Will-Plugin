@@ -34,6 +34,7 @@ def find_contract(wallet):
 
 def extract_contract_data(wallet, tx, utxo):
     contracts=[]
+    print(tx)
     for i in range(len(tx)):
         transaction=Transaction(tx[i])
         address = get_contract_address(transaction.outputs())
