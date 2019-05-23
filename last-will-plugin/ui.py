@@ -217,11 +217,15 @@ class Create(QDialog, MessageBoxMixin):
 
 
     def create_last_will(self, ):
-
+        yorn = self.main_window.question(_(
+            "Do you wish to create the Last Will Contract?"))
+        if not yorn:
+            return
         outputs = [(TYPE_SCRIPT, ScriptOutput(make_opreturn(self.contract.address.to_ui_string().encode('utf8'))),0),
-                   (TYPE_ADDRESS, self.refresh_address, self.value+190),
+                   (TYPE_ADDRESS, self.refresh_address, 546),
                    (TYPE_ADDRESS, self.cold_address, 546),
-                   (TYPE_ADDRESS, self.inheritor_address, 546)]
+                   (TYPE_ADDRESS, self.inheritor_address, 546),
+                   (TYPE_ADDRESS, self.contract.address, self.value)]
         try:
             tx = self.wallet.mktx(outputs, self.password, self.config,
                                   domain=self.fund_domain, change_addr=self.fund_change_address)
@@ -230,25 +234,18 @@ class Create(QDialog, MessageBoxMixin):
             return self.show_critical(_("Not enough balance to fund smart contract."))
         except Exception as e:
             return self.show_critical(repr(e))
-
-        # preparing transaction, contract can't give a change
-        self.main_window.network.broadcast_transaction2(tx)
+        tx.version = 2
+        try:
+            self.main_window.network.broadcast_transaction2(tx)
+        except:
+            pass
         self.create_button.setText("Creating Last Will...")
         self.create_button.setDisabled(True)
-        coin = self.wait_for_coin(id,10)
-        self.wallet.add_input_info(coin)
-        inputs = [coin]
-        outputs = [(TYPE_ADDRESS, self.contract.address, self.value)]
-        tx = Transaction.from_io(inputs, outputs, locktime=0)
-        tx.version=2
-        show_transaction(tx, self.main_window, "Make Last Will contract", prompt_if_unsaved=True)
-
         if self.notification.do_anything() :
             outputs = self.notification.notification_outputs(self.contract.address)
             tx = self.wallet.mktx(outputs, self.password, self.config,
                               domain=self.fund_domain, change_addr=self.fund_change_address)
             show_transaction(tx, self.main_window, "Notification service payment", prompt_if_unsaved=True)
-
         self.plugin.switch_to(Intro, self.wallet_name, None, None)
 
 
