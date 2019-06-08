@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import *
 
 import webbrowser
 from .last_will_contract import LastWillContract
-from electroncash.address import ScriptOutput
+from electroncash.address import ScriptOutput, OpCodes
 from electroncash.transaction import Transaction,TYPE_ADDRESS, TYPE_SCRIPT
 import electroncash.web as web
 from electroncash_gui.qt.amountedit  import BTCAmountEdit
@@ -14,7 +14,7 @@ from electroncash.wallet import Multisig_Wallet
 from electroncash.util import NotEnoughFunds
 from electroncash_gui.qt.transaction_dialog import show_transaction
 from .contract_finder import find_contract, extract_contract_data
-from .last_will_contract import LastWillContractManager, UTXO, CONTRACT, MODE
+from .last_will_contract import LastWillContractManager, UTXO, CONTRACT, MODE, joinbytes
 from .notification_service import NotificationWidget
 from .util import *
 import time, json
@@ -212,7 +212,7 @@ class Create(QDialog, MessageBoxMixin):
         else:
             self.create_button.setDisabled(False)
             addresses = [self.refresh_address, self.cold_address, self.inheritor_address]
-            self.contract=LastWillContract(addresses)
+            self.contract=LastWillContract(addresses, v=0)
 
 
 
@@ -221,7 +221,12 @@ class Create(QDialog, MessageBoxMixin):
             "Do you wish to create the Last Will Contract?"))
         if not yorn:
             return
-        outputs = [(TYPE_SCRIPT, ScriptOutput(make_opreturn(self.contract.address.to_ui_string().encode('utf8'))),0),
+        data1 = self.contract.address.to_ui_string() + ' ' + str(self.contract.version)
+        data2 = str(self.contract.i_time) + ' ' + str(self.contract.rl_time)
+        op_return = joinbytes([OpCodes.OP_RETURN,4,b'sh\x00\x00',len(data1),data1.encode('utf8'),len(data2),data2.encode('utf8')])
+        assert len(data1)<76 and len(data2)<76
+        print(op_return)
+        outputs = [(TYPE_SCRIPT, ScriptOutput(op_return),0),
                    (TYPE_ADDRESS, self.refresh_address, 546),
                    (TYPE_ADDRESS, self.cold_address, 546),
                    (TYPE_ADDRESS, self.inheritor_address, 546),

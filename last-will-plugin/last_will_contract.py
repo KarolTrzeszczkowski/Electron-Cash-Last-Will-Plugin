@@ -22,14 +22,14 @@ class LastWillContract:
     """Contract of last will, that is timelocked for inheritor unless the creator refresh it
     from the hot wallet or spend from the cold wallet."""
 
-    def __init__(self, addresses, initial_tx=None):
+    def __init__(self, addresses, initial_tx=None,v=0):
+        self.version=v
         self.initial_tx=initial_tx
         self.i_time = INHERITACNE_TIME // 512
         self.i_time_bytes = (self.i_time).to_bytes(2, 'little')
         self.rl_time= REFRESH_LOCK_TIME // 512
         self.rl_time_bytes = (self.rl_time).to_bytes(2, 'little')
         self.addresses=addresses
-
         assert len(self.rl_time_bytes) == 2
         assert len(self.i_time_bytes) == 2
 

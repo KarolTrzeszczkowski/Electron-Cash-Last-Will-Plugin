@@ -15,10 +15,12 @@ def find_contract(wallet):
         out = t.outputs()
         address = ''
         if len(out) > 3:
-            address = get_contract_address(out)
+            address, v = get_contract_info(out)
+            if address == None or v == None:
+                continue
             candidates = get_candidates(out)
             for c in candidates:
-                will = LastWillContract(c,t.as_dict())
+                will = LastWillContract(c,t.as_dict(),v)
                 if will.address.to_ui_string()==address:
                         response = wallet.network.synchronous_get(
                             ("blockchain.scripthash.listunspent", [will.address.to_scripthash_hex()]))
@@ -37,10 +39,10 @@ def extract_contract_data(wallet, tx, utxo):
     print(tx)
     for i in range(len(tx)):
         transaction=Transaction(tx[i])
-        address = get_contract_address(transaction.outputs())
+        address, v = get_contract_info(transaction.outputs())
         candidates = get_candidates(transaction.outputs())
         for c in candidates:
-            will = LastWillContract(c, tx[i])
+            will = LastWillContract(c, tx[i],v)
             if will.address.to_ui_string()==address:
                 contracts.append((utxo[i], will, find_my_role(c, wallet)))
     remove_duplicates(contracts)
@@ -63,15 +65,21 @@ def unfunded_contract(r):
     return s
 
 
-def get_contract_address(outputs):
+def get_contract_info(outputs):
     """Finds p2sh output"""
     for o in outputs:
-        if isinstance(o[1], ScriptOutput):
-            try:
-                a=o[1].to_ui_string().split("'")[1]
-                return Address.from_string(a).to_ui_string()
-            except:
-                pass
+        try:
+            assert isinstance(o[1], ScriptOutput)
+            assert o[1].to_ui_string().split(",")[1] == ' (4) 73680000'
+            print(o[1].to_ui_string().split(",")[1])
+            a = o[1].to_ui_string().split("'")[1][:42]
+            print(o[1].to_ui_string().split("'")[1])
+            version = int(o[1].to_ui_string().split("'")[1][42:])
+            assert 0 <= version <= 1
+            return Address.from_string(a).to_ui_string(), version
+        except:
+            continue
+    return None, None
 
 def get_candidates(outputs):
     """Creates all permutations of addresses that are not p2sh type"""
