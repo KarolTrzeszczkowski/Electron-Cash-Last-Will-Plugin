@@ -70,11 +70,9 @@ def get_contract_info(outputs):
     for o in outputs:
         try:
             assert isinstance(o[1], ScriptOutput)
-            assert o[1].to_ui_string().split(",")[1] == ' (4) 73680000'
-            print(o[1].to_ui_string().split(",")[1])
-            a = o[1].to_ui_string().split("'")[1][:42]
-            print(o[1].to_ui_string().split("'")[1])
-            version = int(o[1].to_ui_string().split("'")[1][42:])
+            assert o[1].to_ui_string().split(",")[1] == " (4) '>sh\\x00'"
+            a = o[1].to_ui_string().split("'")[3][:42]
+            version = int(o[1].to_ui_string().split("'")[3][42:])
             assert 0 <= version <= 1
             return Address.from_string(a).to_ui_string(), version
         except:

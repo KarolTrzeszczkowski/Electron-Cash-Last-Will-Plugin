@@ -212,7 +212,7 @@ class Create(QDialog, MessageBoxMixin):
         else:
             self.create_button.setDisabled(False)
             addresses = [self.refresh_address, self.cold_address, self.inheritor_address]
-            self.contract=LastWillContract(addresses, v=0)
+            self.contract=LastWillContract(addresses, v=1)
 
 
 
@@ -223,7 +223,7 @@ class Create(QDialog, MessageBoxMixin):
             return
         data1 = self.contract.address.to_ui_string() + ' ' + str(self.contract.version)
         data2 = str(self.contract.i_time) + ' ' + str(self.contract.rl_time)
-        op_return = joinbytes([OpCodes.OP_RETURN,4,b'sh\x00\x00',len(data1),data1.encode('utf8'),len(data2),data2.encode('utf8')])
+        op_return = joinbytes([OpCodes.OP_RETURN, 4, b'>sh\x00', len(data1), data1.encode('utf8'),len(data2),data2.encode('utf8')])
         assert len(data1)<76 and len(data2)<76
         print(op_return)
         outputs = [(TYPE_SCRIPT, ScriptOutput(op_return),0),
