@@ -92,7 +92,7 @@ Fill the fields.
 
 ![creating](/pictures/creating.png)
 
-Pressing create button will make an initial transaction, that sends dust to your cold wallet, inheritors wallet and refreshing wallet, has a contract address as an OP_RETURN output and prepares the exact amount you have chosen to be sent to your contract. After the initial transaction you will be asked to send the money to the contract. You'll see a transaction window. Broadcast the transaction to put your money in the contract.
+After pressing **create** button you will see a pop-up asking for confirmation. If you confirm will make an initial transaction, that sends dust to your cold wallet, inheritors wallet and refreshing wallet, has a contract address and contract version in OP_RETURN output and sends the amount you have chosen to the contract address. Your contract is now created
 
 ## Licho Notification Service
 
@@ -147,6 +147,10 @@ I also want to thank to **Pein_Sama** for help with spedn and his [famous articl
 I also want to credit **Tobias Ruck** for his idea of looping transactions.
 
 Covenants were invented Malte M ̈oser et al. [whitepaper](https://fc16.ifca.ai/bitcoin/papers/MES16.pdf)
+
+## Contact the author
+
+With any problems contact me at telegram: **@licho92karol**, reddit: **u/Licho92** e-mail: **name.lastname@gmail.com**. If you wish to contact me via Signal or whatsapp, ask for my phone number via any of this channels.
 
 ## Donations
 

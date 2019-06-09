@@ -224,7 +224,7 @@ class Create(QDialog, MessageBoxMixin):
         data1 = self.contract.address.to_ui_string() + ' ' + str(self.contract.version)
         data2 = str(self.contract.i_time) + ' ' + str(self.contract.rl_time)
         op_return = joinbytes([OpCodes.OP_RETURN, 4, b'>sh\x00', len(data1), data1.encode('utf8'),len(data2),data2.encode('utf8')])
-        assert len(data1)<76 and len(data2)<76
+        assert len(data1) < 76 and len(data2) < 76
         print(op_return)
         outputs = [(TYPE_SCRIPT, ScriptOutput(op_return),0),
                    (TYPE_ADDRESS, self.refresh_address, 546),
