@@ -148,9 +148,13 @@ I also want to credit **Tobias Ruck** for his idea of looping transactions.
 
 Covenants were invented Malte M ̈oser et al. [whitepaper](https://fc16.ifca.ai/bitcoin/papers/MES16.pdf)
 
+## Troubleshooting
+### I created a contract with the plugin version < 0.3 and I can't see it.
+Please go [here](updating_contract.md)
+
 ## Contact the author
 
-With any problems contact me at telegram: **@licho92karol**, reddit: **u/Licho92** e-mail: **name.lastname@gmail.com**. If you wish to contact me via Signal or whatsapp, ask for my phone number via any of this channels.
+With any problems contact me on telegram: **@licho92karol**, reddit: **u/Licho92** e-mail: **name.lastname@gmail.com**. If you wish to contact me via Signal or whatsapp, ask for my phone number via any of this channels.
 
 ## Donations
 
