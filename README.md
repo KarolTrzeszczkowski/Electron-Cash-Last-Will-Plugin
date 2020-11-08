@@ -1,4 +1,5 @@
 # Last Will plugin for Electron Cash
+# Warning: Don't use with hardware wallets!
 ![logo](/pictures/licho_logo.png)
 ## Description
 Last Will plugin is made for creation and management of the Last Will smart contract directly from a desktop Electron Cash.
@@ -94,7 +95,7 @@ Fill the fields.
 
 After pressing **create** button you will see a pop-up asking for confirmation. If you confirm will make an initial transaction, that sends dust to your cold wallet, inheritors wallet and refreshing wallet, has a contract address and contract version in OP_RETURN output and sends the amount you have chosen to the contract address. Your contract is now created
 
-## Licho Notification Service
+## Licho Notification Service (Inactive)
 
 The creator of this software Karol Trzeszczkowski (Licho) provides an optional e-mail notification service, that you can order through the plugin.
 
